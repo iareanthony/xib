@@ -67,7 +67,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vib-vm" },
-          "expr": "sum(vib_cve_count{severity=\"CRITICAL\"}) or vector(0)",
+          "expr": "sum(last_over_time(vib_cve_count{severity=\"CRITICAL\"}[8h])) or vector(0)",
           "legendFormat": "Critical",
           "refId": "A"
         }
@@ -105,7 +105,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vib-vm" },
-          "expr": "sum(vib_cve_count{severity=\"HIGH\"}) or vector(0)",
+          "expr": "sum(last_over_time(vib_cve_count{severity=\"HIGH\"}[8h])) or vector(0)",
           "legendFormat": "High",
           "refId": "A"
         }
@@ -143,7 +143,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "tib-vm" },
-          "expr": "tib_kev_matches_in_environment or vector(0)",
+          "expr": "last_over_time(tib_kev_matches_in_environment[8h]) or vector(0)",
           "legendFormat": "KEV matches",
           "refId": "A"
         }
@@ -174,7 +174,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "tib-vm" },
-          "expr": "tib_feed_entries_total or vector(0)",
+          "expr": "last_over_time(tib_feed_entries_total[8h]) or vector(0)",
           "legendFormat": "KEV entries",
           "refId": "A"
         }
@@ -205,7 +205,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vib-vm" },
-          "expr": "count(count by (container) (vib_cve_count)) or vector(0)",
+          "expr": "count(count by (container) (last_over_time(vib_cve_count[8h]))) or vector(0)",
           "legendFormat": "Containers",
           "refId": "A"
         }
@@ -293,7 +293,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "cib-vm" },
-          "expr": "sum(cib_policy_violations_total) or vector(0)",
+          "expr": "sum(last_over_time(cib_policy_violations_total[8h])) or vector(0)",
           "legendFormat": "Violations",
           "refId": "A"
         }
@@ -331,7 +331,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "cib-vm" },
-          "expr": "sum(cib_license_violations_total) or vector(0)",
+          "expr": "sum(last_over_time(cib_license_violations_total[8h])) or vector(0)",
           "legendFormat": "License violations",
           "refId": "A"
         }
@@ -369,7 +369,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "cib-vm" },
-          "expr": "sum(cib_eol_containers_total) or vector(0)",
+          "expr": "sum(last_over_time(cib_eol_containers_total[8h])) or vector(0)",
           "legendFormat": "EOL",
           "refId": "A"
         }
@@ -400,7 +400,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "cib-vm" },
-          "expr": "cib_containers_checked_total or vector(0)",
+          "expr": "last_over_time(cib_containers_checked_total[8h]) or vector(0)",
           "legendFormat": "Checked",
           "refId": "A"
         }
@@ -441,7 +441,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "iib-vm" },
-          "expr": "iib_users_active or vector(0)",
+          "expr": "last_over_time(iib_users_active[8h]) or vector(0)",
           "legendFormat": "Active",
           "refId": "A"
         }
@@ -479,7 +479,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "iib-vm" },
-          "expr": "iib_login_failures_total or vector(0)",
+          "expr": "last_over_time(iib_login_failures_total[8h]) or vector(0)",
           "legendFormat": "Failures",
           "refId": "A"
         }
@@ -517,7 +517,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "pib-vm" },
-          "expr": "pib_certs_expiring_warning or vector(0)",
+          "expr": "last_over_time(pib_certs_expiring_warning[8h]) or vector(0)",
           "legendFormat": "Expiring soon",
           "refId": "A"
         }
@@ -555,7 +555,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "pib-vm" },
-          "expr": "pib_certs_expired or vector(0)",
+          "expr": "last_over_time(pib_certs_expired[8h]) or vector(0)",
           "legendFormat": "Expired",
           "refId": "A"
         }
@@ -586,7 +586,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "pib-vm" },
-          "expr": "pib_certs_total or vector(0)",
+          "expr": "last_over_time(pib_certs_total[8h]) or vector(0)",
           "legendFormat": "Total",
           "refId": "A"
         }
