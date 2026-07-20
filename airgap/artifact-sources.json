@@ -3,6 +3,13 @@
   "cisaKev": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
   "epssCsv": "https://epss.cyentia.com/epss_scores-current.csv.gz",
   "falcoCharts": { "falco": "4.20.0", "falcosidekick": "0.9.5" },
+  "falcoImages": [
+    "falcosecurity/falco:0.40.0-debian",
+    "falcosecurity/falcoctl:0.11.0",
+    "falcosecurity/falco-driver-loader:0.40.0",
+    "falcosecurity/falcosidekick:2.30.0",
+    "appropriate/curl:latest"
+  ],
   "ollamaImage": "ollama/ollama:0.9.6",
   "ollamaModel": "llama3.1:8b"
 }
