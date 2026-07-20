@@ -27,6 +27,7 @@ spec:
       labels: {app.kubernetes.io/name: {{ printf "xib-%s" $name }}, app.kubernetes.io/part-of: xib}
     spec:
       serviceAccountName: {{ include "xib.fullname" $root }}
+      automountServiceAccountToken: {{ eq $name "vib" }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

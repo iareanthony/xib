@@ -1,4 +1,4 @@
-{{- if .Values.aib.enabled }}
+{{- if or .Values.aib.enabled .Values.vib.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata: {name: {{ include "xib.fullname" . }}-reader}
@@ -14,4 +14,3 @@ roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: {{ inclu
 subjects:
   - {kind: ServiceAccount, name: {{ include "xib.fullname" . }}, namespace: {{ .Release.Namespace }} }
 {{- end }}
-

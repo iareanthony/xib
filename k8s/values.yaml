@@ -40,7 +40,7 @@ aib:
 
 vib:
   enabled: true
-  image: vib-scanner:0.1.0
+  image: xib-vib-scanner:0.1.0
   scanIntervalHours: "6"
   severityFilter: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
   additionalImages: ""
