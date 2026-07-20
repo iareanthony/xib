@@ -49,7 +49,7 @@ vib:
 
 cib:
   enabled: true
-  image: cib-checker:0.1.0
+  image: xib-cib-checker:0.1.0
   scanIntervalHours: "6"
   additionalImages: ""
   dockerHosts: ""

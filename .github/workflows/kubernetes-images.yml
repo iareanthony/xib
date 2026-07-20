@@ -14,6 +14,27 @@ permissions:
   packages: write
 
 jobs:
+  cib-k8s:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: images/cib-k8s/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xib-cib-checker:0.1.0
+            ghcr.io/${{ github.repository_owner }}/xib-cib-checker:sha-${{ github.sha }}
+
   vib-k8s:
     runs-on: ubuntu-latest
     steps:
@@ -34,4 +55,3 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/xib-vib-scanner:0.1.0
             ghcr.io/${{ github.repository_owner }}/xib-vib-scanner:sha-${{ github.sha }}
-
