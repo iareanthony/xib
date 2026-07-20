@@ -1,12 +1,18 @@
 {{- if .Values.platform.grafana.deploy }}
 {{- if not .Values.platform.grafana.admin.existingSecret }}
+{{- $adminSecretName := printf "%s-grafana-admin" (include "xib.fullname" .) }}
+{{- $existingAdminSecret := lookup "v1" "Secret" .Release.Namespace $adminSecretName }}
 apiVersion: v1
 kind: Secret
-metadata: {name: {{ include "xib.fullname" . }}-grafana-admin}
+metadata: {name: {{ $adminSecretName }}}
 type: Opaque
 stringData:
   admin-user: admin
+  {{- if and $existingAdminSecret (index $existingAdminSecret.data "admin-password") }}
+  admin-password: {{ index $existingAdminSecret.data "admin-password" | b64dec | quote }}
+  {{- else }}
   admin-password: {{ randAlphaNum 24 | quote }}
+  {{- end }}
 ---
 {{- end }}
 apiVersion: v1
@@ -76,4 +82,3 @@ spec:
   selector: {app.kubernetes.io/name: xib-grafana}
   ports: [{name: http, port: 3000, targetPort: http}]
 {{- end }}
-
