@@ -5,6 +5,8 @@ Umbrella project that composes all **in-a-box** security tools into a single sta
 XIB can run through Docker Compose or as a portable Kubernetes deployment. The
 Kubernetes chart includes standalone, existing-platform, and air-gapped
 profiles; see [Kubernetes and air-gapped deployment](docs/kubernetes-airgap.md).
+For the operating model and complete deployment lifecycle, see the
+[Kubernetes Concept of Operations](docs/CONOPS.md).
 
 ![Dashboard preview](docs/dashboard-preview.png)
 
