@@ -1,0 +1,68 @@
+{{- $root := . -}}
+{{- range $name := list "vib" "cib" "tib" "pib" }}
+{{- $cfg := index $root.Values $name }}
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xib.fullname" $root }}-{{ $name }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- if $root.Values.global.storageClass }}
+  storageClassName: {{ $root.Values.global.storageClass | quote }}
+  {{- end }}
+  resources: {requests: {storage: {{ $cfg.storage }}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xib.fullname" $root }}-{{ $name }}
+  labels: {app.kubernetes.io/name: {{ printf "xib-%s" $name }}, app.kubernetes.io/part-of: xib}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: {{ printf "xib-%s" $name }}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: {{ printf "xib-%s" $name }}, app.kubernetes.io/part-of: xib}
+    spec:
+      serviceAccountName: {{ include "xib.fullname" $root }}
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "xib.image" (dict "Values" $root.Values "image" $cfg.image) | quote }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          env:
+            - {name: VICTORIAMETRICS_URL, value: {{ include "xib.vmUrl" $root | quote }}}
+            {{- if eq $name "vib" }}
+            - {name: SCAN_INTERVAL_HOURS, value: {{ $cfg.scanIntervalHours | quote }}}
+            - {name: SEVERITY_FILTER, value: {{ $cfg.severityFilter | quote }}}
+            - {name: ADDITIONAL_IMAGES, value: {{ $cfg.additionalImages | quote }}}
+            - {name: DOCKER_HOSTS, value: {{ $cfg.dockerHosts | quote }}}
+            {{- else if eq $name "cib" }}
+            - {name: SCAN_INTERVAL_HOURS, value: {{ $cfg.scanIntervalHours | quote }}}
+            - {name: ADDITIONAL_IMAGES, value: {{ $cfg.additionalImages | quote }}}
+            - {name: DOCKER_HOSTS, value: {{ $cfg.dockerHosts | quote }}}
+            {{- else if eq $name "tib" }}
+            - {name: SYNC_INTERVAL_HOURS, value: {{ $cfg.syncIntervalHours | quote }}}
+            - {name: VIB_VICTORIAMETRICS_URL, value: {{ include "xib.vmUrl" $root | quote }}}
+            - {name: CISA_KEV_URL, value: {{ $cfg.feeds.cisaKevUrl | quote }}}
+            - {name: EPSS_API_URL, value: {{ $cfg.feeds.epssApiUrl | quote }}}
+            {{- else if eq $name "pib" }}
+            - {name: ENDPOINTS, value: {{ $cfg.endpoints | quote }}}
+            - {name: CHECK_INTERVAL_HOURS, value: {{ $cfg.intervalHours | quote }}}
+            {{- end }}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" $root }}-{{ $name }}}}
+        - {name: tmp, emptyDir: {}}
+---
+{{- end }}
+{{- end }}
+

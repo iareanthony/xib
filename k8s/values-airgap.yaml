@@ -1,0 +1,10 @@
+global:
+  # Change to the registry reachable by every node in the offline cluster.
+  imageRegistry: registry.local/xib
+  imagePullPolicy: IfNotPresent
+
+tib:
+  feeds:
+    cisaKevUrl: http://xib-offline-data/xib-data/known_exploited_vulnerabilities.json
+    epssApiUrl: http://xib-offline-data/xib-data/epss.csv
+

@@ -1,0 +1,83 @@
+global:
+  imageRegistry: ghcr.io/iareanthony
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  storageClass: ""
+
+platform:
+  metrics:
+    deploy: true
+    image: victoriametrics/victoria-metrics:v1.121.0
+    retention: 90d
+    storage: 20Gi
+  grafana:
+    deploy: true
+    image: grafana/grafana:12.1.0
+    storage: 2Gi
+    admin:
+      existingSecret: ""
+      userKey: admin-user
+      passwordKey: admin-password
+  prometheusOperator:
+    enabled: false
+
+aib:
+  enabled: true
+  image: aib:sha-94da209
+  storage: 5Gi
+  servicePort: 8080
+  config: |
+    database:
+      driver: sqlite
+      path: /data/aib.db
+    server:
+      address: 0.0.0.0:8080
+
+vib:
+  enabled: true
+  image: vib-scanner:0.1.0
+  scanIntervalHours: "6"
+  severityFilter: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+  additionalImages: ""
+  dockerHosts: ""
+  storage: 10Gi
+
+cib:
+  enabled: true
+  image: cib-checker:0.1.0
+  scanIntervalHours: "6"
+  additionalImages: ""
+  dockerHosts: ""
+  storage: 10Gi
+
+tib:
+  enabled: true
+  image: tib-collector:0.1.0
+  syncIntervalHours: "6"
+  storage: 5Gi
+  feeds:
+    # For an air-gapped cluster, serve mirrored files from an internal HTTP service.
+    cisaKevUrl: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+    epssApiUrl: https://api.first.org/data/v1/epss
+
+iib:
+  enabled: false
+  image: amftech-k8s-iib-monitor:0.1.0
+  authentikUrl: http://authentik-server.authentication.svc:80
+  existingSecret: authentik-iib-monitor
+  tokenKey: token
+  intervalSeconds: "300"
+
+pib:
+  enabled: false
+  image: pib-monitor:0.1.0
+  endpoints: ""
+  intervalHours: "6"
+
+sib:
+  # SIB remains its own Helm release. This flag creates a discoverable marker and
+  # keeps XIB installable without reaching an external Helm repository.
+  enabled: false
+  releaseName: sib-k8s
+  namespace: sib-k8s
+

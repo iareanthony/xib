@@ -2,6 +2,10 @@
 
 Umbrella project that composes all **in-a-box** security tools into a single stack with a unified Grafana posture dashboard.
 
+XIB can run through Docker Compose or as a portable Kubernetes deployment. The
+Kubernetes chart includes standalone, existing-platform, and air-gapped
+profiles; see [Kubernetes and air-gapped deployment](docs/kubernetes-airgap.md).
+
 ![Dashboard preview](docs/dashboard-preview.png)
 
 ```
@@ -35,6 +39,16 @@ git clone --recurse-submodules git@github.com:matijazezelj/xib.git
 cd xib
 make up
 ```
+
+### Kubernetes
+
+```bash
+helm upgrade --install xib ./k8s -n xib-system --create-namespace
+```
+
+For a disconnected cluster, prepare the image archive on a connected staging
+machine with `airgap/export-images.ps1`, transfer the resulting bundle, mirror
+or load the images, and install with `airgap/install.ps1`.
 
 If you already cloned without `--recurse-submodules`:
 ```bash

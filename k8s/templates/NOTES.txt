@@ -1,0 +1,11 @@
+XIB has been installed in namespace {{ .Release.Namespace }}.
+{{- if .Values.platform.grafana.deploy }}
+
+Grafana:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "xib.fullname" . }}-grafana 3000:3000
+{{- end }}
+{{- if .Values.iib.enabled }}
+
+IIB expects Secret {{ .Values.iib.existingSecret }} with key {{ .Values.iib.tokenKey }}.
+{{- end }}
+
