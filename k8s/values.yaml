@@ -27,11 +27,16 @@ aib:
   storage: 5Gi
   servicePort: 8080
   config: |
-    database:
-      driver: sqlite
+    storage:
       path: /data/aib.db
     server:
-      address: 0.0.0.0:8080
+      listen: 0.0.0.0:8080
+      read_only: true
+    sources:
+      kubernetes:
+        - live: true
+    scan:
+      on_startup: true
 
 vib:
   enabled: true
@@ -80,4 +85,3 @@ sib:
   enabled: false
   releaseName: sib-k8s
   namespace: sib-k8s
-

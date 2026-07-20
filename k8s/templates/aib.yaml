@@ -26,6 +26,8 @@ spec:
     metadata: {labels: {app.kubernetes.io/name: xib-aib, app.kubernetes.io/part-of: xib}}
     spec:
       serviceAccountName: {{ include "xib.fullname" . }}
+      # AIB uses the in-cluster token to perform its configured read-only live scan.
+      automountServiceAccountToken: true
       securityContext: {runAsNonRoot: true, runAsUser: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: aib
@@ -33,6 +35,14 @@ spec:
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           args: ["serve", "--config", "/config/aib.yaml"]
           ports: [{name: http, containerPort: {{ .Values.aib.servicePort }}}]
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 15
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
           volumeMounts:
@@ -51,4 +61,3 @@ spec:
   selector: {app.kubernetes.io/name: xib-aib}
   ports: [{name: http, port: {{ .Values.aib.servicePort }}, targetPort: http}]
 {{- end }}
-
