@@ -1,0 +1,11 @@
+platform:
+  metrics:
+    deploy: false
+  grafana:
+    deploy: false
+  prometheusOperator:
+    enabled: true
+
+iib:
+  enabled: true
+

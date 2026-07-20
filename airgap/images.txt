@@ -1,0 +1,10 @@
+# Runtime images required by the default XIB chart profile.
+# Resolve application tags to immutable release tags or digests before publishing a bundle.
+ghcr.io/iareanthony/aib:sha-94da209
+ghcr.io/iareanthony/xib-vib-scanner:0.2.0
+ghcr.io/iareanthony/xib-cib-checker:0.2.0
+ghcr.io/iareanthony/xib-tib-collector:0.2.0
+ghcr.io/iareanthony/xib-pib-monitor:0.2.0
+ghcr.io/iareanthony/xib-iib-monitor:0.2.0
+victoriametrics/victoria-metrics:v1.121.0
+grafana/grafana:12.1.0

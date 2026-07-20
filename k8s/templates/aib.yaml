@@ -1,0 +1,63 @@
+{{- if .Values.aib.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: {{ include "xib.fullname" . }}-aib}
+data:
+  aib.yaml: |
+{{ .Values.aib.config | indent 4 }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: {{ include "xib.fullname" . }}-aib}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+  resources: {requests: {storage: {{ .Values.aib.storage }}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: {{ include "xib.fullname" . }}-aib}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: xib-aib}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: xib-aib, app.kubernetes.io/part-of: xib}}
+    spec:
+      serviceAccountName: {{ include "xib.fullname" . }}
+      # AIB uses the in-cluster token to perform its configured read-only live scan.
+      automountServiceAccountToken: true
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: aib
+          image: {{ include "xib.image" (dict "Values" .Values "image" .Values.aib.image) | quote }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args: ["serve", "--config", "/config/aib.yaml"]
+          ports: [{name: http, containerPort: {{ .Values.aib.servicePort }}}]
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: config, mountPath: /config/aib.yaml, subPath: aib.yaml, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-aib}}
+        - {name: config, configMap: {name: {{ include "xib.fullname" . }}-aib}}
+        - {name: tmp, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: {{ include "xib.fullname" . }}-aib}
+spec:
+  selector: {app.kubernetes.io/name: xib-aib}
+  ports: [{name: http, port: {{ .Values.aib.servicePort }}, targetPort: http}]
+{{- end }}

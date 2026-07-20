@@ -1,0 +1,50 @@
+{{- if .Values.platform.metrics.deploy }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xib.fullname" . }}-metrics
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.platform.metrics.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xib.fullname" . }}-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: xib-metrics}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: xib-metrics, app.kubernetes.io/part-of: xib}
+    spec:
+      serviceAccountName: {{ include "xib.fullname" . }}
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: victoriametrics
+          image: {{ .Values.platform.metrics.image | quote }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args: ["-storageDataPath=/data", "-retentionPeriod={{ .Values.platform.metrics.retention }}"]
+          ports: [{name: http, containerPort: 8428}]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          volumeMounts: [{name: data, mountPath: /data}]
+      volumes: [{name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-metrics}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xib.fullname" . }}-metrics
+spec:
+  selector: {app.kubernetes.io/name: xib-metrics}
+  ports: [{name: http, port: 8428, targetPort: http}]
+{{- end }}
+

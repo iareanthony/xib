@@ -1,0 +1,45 @@
+{{- if .Values.iib.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: {{ include "xib.fullname" . }}-iib}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: xib-iib}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: xib-iib, app.kubernetes.io/part-of: xib}}
+    spec:
+      serviceAccountName: {{ include "xib.fullname" . }}
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: iib
+          image: {{ include "xib.image" (dict "Values" .Values "image" .Values.iib.image) | quote }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports: [{name: metrics, containerPort: 9108}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          env:
+            - {name: AUTHENTIK_URL, value: {{ .Values.iib.authentikUrl | quote }}}
+            - {name: INTERVAL_SECONDS, value: {{ .Values.iib.intervalSeconds | quote }}}
+            - name: AUTHENTIK_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.iib.existingSecret }}, key: {{ .Values.iib.tokenKey }} }
+          resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 250m, memory: 256Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xib.fullname" . }}-iib
+  labels: {app.kubernetes.io/name: xib-iib}
+spec:
+  selector: {app.kubernetes.io/name: xib-iib}
+  ports: [{name: metrics, port: 9108, targetPort: metrics}]
+{{- if .Values.platform.prometheusOperator.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: {name: {{ include "xib.fullname" . }}-iib}
+spec:
+  selector: {matchLabels: {app.kubernetes.io/name: xib-iib}}
+  endpoints: [{port: metrics, interval: 60s}]
+{{- end }}
+{{- end }}
+
