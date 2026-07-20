@@ -67,7 +67,7 @@ tib:
 
 iib:
   enabled: false
-  image: amftech-k8s-iib-monitor:0.1.0
+  image: xib-iib-monitor:0.2.0
   authentikUrl: http://authentik-server.authentication.svc:80
   existingSecret: authentik-iib-monitor
   tokenKey: token
@@ -75,7 +75,7 @@ iib:
 
 pib:
   enabled: false
-  image: pib-monitor:0.1.0
+  image: xib-pib-monitor:0.2.0
   endpoints: ""
   intervalHours: "6"
 

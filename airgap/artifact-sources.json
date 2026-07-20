@@ -1,0 +1,8 @@
+{
+  "trivyImage": "aquasec/trivy:0.70.0",
+  "cisaKev": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+  "epssCsv": "https://epss.cyentia.com/epss_scores-current.csv.gz",
+  "falcoCharts": { "falco": "4.20.0", "falcosidekick": "0.9.5" },
+  "ollamaImage": "ollama/ollama:0.9.6",
+  "ollamaModel": "llama3.1:8b"
+}

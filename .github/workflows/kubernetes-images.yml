@@ -14,7 +14,16 @@ permissions:
   packages: write
 
 jobs:
-  tib-k8s:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: vib, image: xib-vib-scanner, file: images/vib-k8s/Dockerfile}
+          - {name: cib, image: xib-cib-checker, file: images/cib-k8s/Dockerfile}
+          - {name: tib, image: xib-tib-collector, file: images/tib-k8s/Dockerfile}
+          - {name: pib, image: xib-pib-monitor, file: images/pib-k8s/Dockerfile}
+          - {name: iib, image: xib-iib-monitor, file: images/iib-k8s/Dockerfile}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,50 +38,9 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: images/tib-k8s/Dockerfile
+          file: ${{ matrix.file }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/xib-tib-collector:0.1.0
-            ghcr.io/${{ github.repository_owner }}/xib-tib-collector:sha-${{ github.sha }}
-
-  cib-k8s:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: images/cib-k8s/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/xib-cib-checker:0.1.0
-            ghcr.io/${{ github.repository_owner }}/xib-cib-checker:sha-${{ github.sha }}
-
-  vib-k8s:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: images/vib-k8s/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/xib-vib-scanner:0.1.0
-            ghcr.io/${{ github.repository_owner }}/xib-vib-scanner:sha-${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:0.2.0
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
