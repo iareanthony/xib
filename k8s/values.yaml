@@ -57,7 +57,7 @@ cib:
 
 tib:
   enabled: true
-  image: tib-collector:0.1.0
+  image: xib-tib-collector:0.1.0
   syncIntervalHours: "6"
   storage: 5Gi
   feeds:

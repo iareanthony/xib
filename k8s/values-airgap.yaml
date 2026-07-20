@@ -6,5 +6,5 @@ global:
 tib:
   feeds:
     cisaKevUrl: http://xib-offline-data/xib-data/known_exploited_vulnerabilities.json
-    epssApiUrl: http://xib-offline-data/xib-data/epss.csv
-
+    # Mirror the FIRST API response shape, including a top-level "data" array.
+    epssApiUrl: http://xib-offline-data/xib-data/epss-api.json
