@@ -27,7 +27,13 @@ spec:
       labels: {app.kubernetes.io/name: {{ printf "xib-%s" $name }}, app.kubernetes.io/part-of: xib}
     spec:
       serviceAccountName: {{ include "xib.fullname" $root }}
-      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: {type: RuntimeDefault}
       containers:
         - name: {{ $name }}
           image: {{ include "xib.image" (dict "Values" $root.Values "image" $cfg.image) | quote }}
@@ -35,12 +41,15 @@ spec:
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           env:
             - {name: VICTORIAMETRICS_URL, value: {{ include "xib.vmUrl" $root | quote }}}
+            - {name: HOME, value: /tmp}
             {{- if eq $name "vib" }}
+            - {name: TRIVY_CACHE_DIR, value: /data/trivy-cache}
             - {name: SCAN_INTERVAL_HOURS, value: {{ $cfg.scanIntervalHours | quote }}}
             - {name: SEVERITY_FILTER, value: {{ $cfg.severityFilter | quote }}}
             - {name: ADDITIONAL_IMAGES, value: {{ $cfg.additionalImages | quote }}}
             - {name: DOCKER_HOSTS, value: {{ $cfg.dockerHosts | quote }}}
             {{- else if eq $name "cib" }}
+            - {name: TRIVY_CACHE_DIR, value: /data/trivy-cache}
             - {name: SCAN_INTERVAL_HOURS, value: {{ $cfg.scanIntervalHours | quote }}}
             - {name: ADDITIONAL_IMAGES, value: {{ $cfg.additionalImages | quote }}}
             - {name: DOCKER_HOSTS, value: {{ $cfg.dockerHosts | quote }}}
@@ -65,4 +74,3 @@ spec:
 ---
 {{- end }}
 {{- end }}
-
