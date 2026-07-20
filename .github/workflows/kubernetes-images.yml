@@ -27,8 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - name: Check out live application source
+        if: matrix.name == 'vib' || matrix.name == 'cib' || matrix.name == 'tib'
+        run: git submodule update --init --depth 1 ${{ matrix.name }}
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
