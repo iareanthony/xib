@@ -1,0 +1,255 @@
+{
+  "uid": "pib-overview",
+  "title": "PIB — PKI Certificate Health",
+  "description": "Certificate expiry monitoring across all TLS endpoints",
+  "tags": ["pib", "pki", "certificates", "security"],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "version": 1,
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Expiring Critical (< 7d)",
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "mappings": []
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "last_over_time(pib_certs_expiring_critical[8h])",
+        "legendFormat": "Critical",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Expiring Soon (< 30d)",
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          },
+          "mappings": []
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "last_over_time(pib_certs_expiring_warning[8h])",
+        "legendFormat": "Warning",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Expired",
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "dark-red", "value": 1 }
+            ]
+          },
+          "mappings": []
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "last_over_time(pib_certs_expired[8h])",
+        "legendFormat": "Expired",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total Monitored",
+      "gridPos": { "h": 4, "w": 4, "x": 15, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "mappings": []
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "last_over_time(pib_certs_total[8h])",
+        "legendFormat": "Certs",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last Scan",
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsLocal",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "mappings": []
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "pib_last_scan_timestamp",
+        "legendFormat": "Last Scan",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Certificate Inventory",
+      "description": "All monitored TLS certificates with expiry status",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
+      "options": {
+        "sortBy": [{ "displayName": "Days Remaining", "desc": false }],
+        "footer": { "show": false }
+      },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left", "displayMode": "auto" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "host" }, "properties": [{ "id": "displayName", "value": "Host" }] },
+          { "matcher": { "id": "byName", "options": "cn" }, "properties": [{ "id": "displayName", "value": "Common Name" }] },
+          { "matcher": { "id": "byName", "options": "issuer" }, "properties": [{ "id": "displayName", "value": "Issuer" }] },
+          { "matcher": { "id": "byName", "options": "sans" }, "properties": [{ "id": "displayName", "value": "SANs" }] },
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "displayName", "value": "Days Remaining" },
+              { "id": "custom.width", "value": 140 },
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              { "id": "thresholds", "value": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "dark-red", "value": null },
+                  { "color": "red", "value": 0 },
+                  { "color": "orange", "value": 7 },
+                  { "color": "yellow", "value": 30 },
+                  { "color": "green", "value": 60 }
+                ]
+              }}
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        { "id": "labelsToFields", "options": { "valueLabel": "value", "mode": "columns" } },
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true }, "indexByName": {}, "renameByName": {} } }
+      ],
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "last_over_time(pib_cert_days_remaining[8h])",
+        "instant": true,
+        "legendFormat": "{{host}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Days Remaining Over Time",
+      "description": "Certificate expiry countdown — watch for certs approaching zero",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "asc" },
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 5,
+            "showPoints": "auto",
+            "spanNulls": true
+          },
+          "unit": "d",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 7 },
+              { "color": "yellow", "value": 30 },
+              { "color": "green", "value": 60 }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "pib-vm" },
+        "expr": "pib_cert_days_remaining",
+        "legendFormat": "{{host}} ({{cn}})",
+        "refId": "A"
+      }]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "links": []
+}

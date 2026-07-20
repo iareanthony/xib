@@ -28,6 +28,33 @@ data:
         access: proxy
         url: {{ include "xib.vmUrl" . }}
         isDefault: true
+      - {name: VIB Metrics, uid: vib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+      - {name: TIB Metrics, uid: tib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+      - {name: CIB Metrics, uid: cib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+      - {name: IIB Metrics, uid: iib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+      - {name: PIB Metrics, uid: pib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: {{ include "xib.fullname" . }}-grafana-dashboards}
+data:
+  provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: XIB Dashboards
+        orgId: 1
+        folder: XIB
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/dashboards
+          foldersFromFilesStructure: false
+  {{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+  {{ base $path }}: |-
+{{ $.Files.Get $path | indent 4 }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -71,9 +98,12 @@ spec:
           volumeMounts:
             - {name: data, mountPath: /var/lib/grafana}
             - {name: datasources, mountPath: /etc/grafana/provisioning/datasources, readOnly: true}
+            - {name: dashboards, mountPath: /etc/grafana/dashboards, readOnly: true}
+            - {name: dashboards, mountPath: /etc/grafana/provisioning/dashboards/xib.yaml, subPath: provider.yaml, readOnly: true}
       volumes:
         - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-grafana}}
         - {name: datasources, configMap: {name: {{ include "xib.fullname" . }}-grafana-datasources}}
+        - {name: dashboards, configMap: {name: {{ include "xib.fullname" . }}-grafana-dashboards}}
 ---
 apiVersion: v1
 kind: Service
