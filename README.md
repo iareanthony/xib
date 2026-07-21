@@ -35,7 +35,7 @@ xib/
 └── ...    ← XIB Grafana (unified dashboard, all 5 datasources)
 ```
 
-Each sub-project is a git submodule with its own independent `docker compose up` — XIB orchestrates them all via Docker Compose v2 `include:` directives and connects the unified Grafana to each tool's VictoriaMetrics instance.
+The Docker deployment is defined entirely in this repository and connects all collectors to one VictoriaMetrics service and one provisioned Grafana service.
 
 ---
 
@@ -57,24 +57,13 @@ For a disconnected cluster, prepare the image archive on a connected staging
 machine with `airgap/export-images.ps1`, transfer the resulting bundle, mirror
 or load the images, and install with `airgap/install.ps1`.
 
-If you already cloned without `--recurse-submodules`:
-```bash
-make pull-submodules
-make up
-```
-
 Open **http://localhost:3000** — the XIB Security Overview dashboard loads automatically.
 
-Each tool also has its own Grafana at its assigned port:
+Optional monitors can be enabled after their settings are added to `.env`:
 
-| Tool | Grafana | Authentik / step-ca |
-|------|---------|---------------------|
-| VIB — Vulnerabilities | :3001 | — |
-| TIB — Threat Intel | :3002 | — |
-| CIB — Compliance | :3003 | — |
-| IIB — Identity | :3004 | :9080 |
-| PIB — PKI | :3005 | :9000 (step-ca) |
-| **XIB — Unified** | **:3000** | — |
+```bash
+docker compose --profile pki --profile identity up -d
+```
 
 ---
 
