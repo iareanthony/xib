@@ -4,7 +4,6 @@ services:
     environment:
       GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     volumes:
-      - ${SIB_DIR:-./.xib-components/sib}/grafana/provisioning/datasources/templates/datasources-vm.yml:/etc/grafana/provisioning/datasources/sib.yml:ro
       - ${SIB_DIR:-./.xib-components/sib}/grafana/provisioning/dashboards/victorialogs:/etc/grafana/sib-dashboards:ro
     networks:
       - xib

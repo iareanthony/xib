@@ -1,0 +1,23 @@
+apiVersion: 1
+datasources:
+  - name: SIB VictoriaLogs
+    type: victoriametrics-logs-datasource
+    uid: victorialogs
+    access: proxy
+    url: http://sib-victorialogs:9428
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+  - name: SIB VictoriaMetrics
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://sib-victoriametrics:8428
+    isDefault: false
+    editable: false
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      prometheusVersion: "2.50.0"
