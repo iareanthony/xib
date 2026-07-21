@@ -10,9 +10,9 @@
     "falcosecurity/falcosidekick:2.30.0",
     "appropriate/curl:latest"
   ],
-  "sibDockerSource": "https://github.com/iareanthony/sib/archive/b51f69c475c97e7bef100292d3697f2b0eddca55.zip",
+  "sibDockerSource": "https://github.com/iareanthony/sib/archive/b41a981999e915b1a6900cbb70619716bf94a720.zip",
   "sibDockerImages": [
-    "falcosecurity/falco:0.40.0",
+    "falcosecurity/falco:0.44.0",
     "falcosecurity/falcosidekick:2.29.0",
     "victoriametrics/victoria-logs:v1.50.0",
     "victoriametrics/victoria-metrics:v1.144.0",
