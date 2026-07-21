@@ -10,7 +10,7 @@
     "falcosecurity/falcosidekick:2.30.0",
     "appropriate/curl:latest"
   ],
-  "sibDockerSource": "https://github.com/iareanthony/sib/archive/b41a981999e915b1a6900cbb70619716bf94a720.zip",
+  "sibDockerSource": "https://github.com/iareanthony/sib/archive/5dcc92ec8dadca6315c3a1bfb664bf13437c5e7e.zip",
   "sibDockerImages": [
     "falcosecurity/falco:0.44.0",
     "falcosecurity/falcosidekick:2.29.0",
