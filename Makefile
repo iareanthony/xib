@@ -1,4 +1,4 @@
-.PHONY: up up-socket down restart logs build clean setup smoke
+.PHONY: up up-socket down restart logs build clean setup smoke sib-install sib-start sib-stop sib-health sib-logs
 
 up: setup
 	docker compose up -d
@@ -29,6 +29,12 @@ setup:
 
 smoke: ## Run local runtime smoke checks against the XIB stack
 	@bash scripts/smoke-test.sh
+
+sib-install: ## Install pinned Docker SIB/Falco runtime stack (privileged)
+	@bash scripts/sib-docker.sh install
+
+sib-start sib-stop sib-health sib-logs:
+	@bash scripts/sib-docker.sh $(@:sib-%=%)
 
 clean:
 	docker compose down -v

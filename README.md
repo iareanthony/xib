@@ -80,11 +80,28 @@ Optional monitors can be enabled after their settings are added to `.env`:
 docker compose --profile pki --profile identity up -d
 ```
 
+### SIB runtime detection
+
+Docker SIB is maintained in the pinned
+[`iareanthony/sib`](https://github.com/iareanthony/sib) fork and runs as a
+separate privileged Falco stack:
+
+```bash
+make sib-install
+make sib-health
+```
+
+SIB Grafana uses `http://localhost:3400`; VictoriaLogs uses port `9428`,
+VictoriaMetrics `8429`, and Falcosidekick `2801`. Use `make sib-stop`,
+`make sib-start`, and `make sib-logs` for lifecycle operations. SIB requires a
+Linux host and privileged kernel/eBPF access; Docker Desktop is not supported.
+
 ---
 
 ## Configuration
 
-Sub-project `.env` files are created automatically from their `.env.example` templates on first `make up`. Secrets (Authentik keys, tokens, passwords) are auto-generated.
+The XIB `.env` file is created from `.env.example` on first `make up`. Docker
+SIB keeps its separate configuration under `.xib-components/sib/.env`.
 
 To customise the unified Grafana:
 

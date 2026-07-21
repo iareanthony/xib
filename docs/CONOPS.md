@@ -443,11 +443,31 @@ collector image is available in the selected registry.
 
 ### 10.3 SIB
 
-SIB-K8s remains a separate Helm release because Falco and Kubernetes audit
-collection have additional kernel, host, API-server, and artifact requirements.
-Install the vendored `sib-k8s` chart from the same offline transfer set when
-runtime and Kubernetes audit monitoring are required. The XIB `sib` values are
-integration metadata, not an embedded Falco installation.
+SIB is intentionally managed as a separate runtime-security deployment because
+Falco requires kernel, host, API-server, and artifact permissions outside the
+normal XIB collector trust boundary.
+
+For Docker, XIB pins the Apache-2.0 `iareanthony/sib` fork at commit
+`b51f69c475c97e7bef100292d3697f2b0eddca55`. Install and operate it with:
+
+```bash
+make sib-install
+make sib-health
+make sib-logs
+make sib-stop
+make sib-start
+```
+
+The integration checks out SIB under `.xib-components/sib` and assigns separate
+host ports: Grafana `3400`, VictoriaLogs `9428`, VictoriaMetrics `8429`, and
+Falcosidekick `2801`. SIB Falco runs privileged, mounts `/dev`, `/proc`, `/etc`,
+and the Docker socket, and uses modern eBPF. Treat it as host-root-equivalent.
+It requires a supported Linux kernel and does not support Docker Desktop.
+
+For Kubernetes, `iareanthony/sib-k8s` remains a separate Helm release. Install
+the vendored `sib-k8s` chart from the same offline transfer set when runtime and
+Kubernetes audit monitoring are required. The XIB `sib` values are integration
+metadata, not an embedded Falco installation.
 
 ## 11. Post-deployment validation
 

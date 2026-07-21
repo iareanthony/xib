@@ -7,9 +7,10 @@ $trivyDir = New-Item -ItemType Directory -Force "$artifactDir\trivy-cache"
 docker run --rm --volume "$($trivyDir.FullName):/root/.cache/trivy" $sources.trivyImage image --download-db-only
 Invoke-WebRequest $sources.cisaKev -OutFile "$artifactDir\known_exploited_vulnerabilities.json"
 Invoke-WebRequest $sources.epssCsv -OutFile "$artifactDir\epss_scores-current.csv.gz"
+Invoke-WebRequest $sources.sibDockerSource -OutFile "$artifactDir\sib-docker-source.zip"
 helm pull falco --repo https://falcosecurity.github.io/charts --version $sources.falcoCharts.falco --destination $chartDir
 helm pull falcosidekick --repo https://falcosecurity.github.io/charts --version $sources.falcoCharts.falcosidekick --destination $chartDir
-$extraImages = @($sources.trivyImage) + @($sources.falcoImages) + @($sources.ollamaImage)
+$extraImages = @($sources.trivyImage) + @($sources.falcoImages) + @($sources.sibDockerImages) + @($sources.ollamaImage)
 $extraImages | ForEach-Object { docker pull $_ }
 if ($IncludeOllamaModel) {
   $ollamaDir = New-Item -ItemType Directory -Force "$artifactDir\ollama"
