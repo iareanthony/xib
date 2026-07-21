@@ -1,9 +1,9 @@
-# XIB Kubernetes Concept of Operations
+# XIB Concept of Operations
 
 ## 1. Purpose
 
 Security in a Box (XIB) is a self-hosted security visibility platform for
-Kubernetes environments. It combines asset inventory, vulnerability scanning,
+Docker and Kubernetes environments. It combines asset inventory, vulnerability scanning,
 compliance analysis, threat-intelligence correlation, identity monitoring,
 certificate monitoring, metrics storage, and dashboards in one deployable
 package.
@@ -16,6 +16,7 @@ offline operation, upgrades, rollback, and removal of XIB.
 
 XIB is designed to:
 
+- deploy as a self-contained Docker Compose project without Git submodules;
 - deploy into a dedicated Kubernetes namespace;
 - run without privileged containers or host Docker socket mounts;
 - discover Kubernetes workloads using read-only API access;
@@ -69,12 +70,23 @@ Their panels remain empty until the corresponding component is configured.
 
 ## 4. Deployment profiles
 
-### 4.1 Standalone
+### 4.1 Docker Compose
+
+The root `docker-compose.yml` runs VIB, CIB, TIB, VictoriaMetrics, and Grafana
+without Kubernetes. It uses the same immutable application image digests as the
+Helm chart. PIB and IIB are optional profiles because they require configured
+TLS endpoints or an existing Authentik service.
+
+Compose uses one VictoriaMetrics service and provisions all six Grafana
+dashboards. VIB and CIB inspect the registry images listed in `XIB_SCAN_IMAGES`;
+they do not require access to the host Docker socket.
+
+### 4.2 Kubernetes standalone
 
 The default `k8s/values.yaml` profile installs XIB-owned VictoriaMetrics and
 Grafana services. Use this profile for a new cluster or a self-contained test.
 
-### 4.2 Existing platform
+### 4.3 Kubernetes existing platform
 
 `k8s/values-existing-platform.yaml` disables the XIB-owned metrics and Grafana
 services and enables Prometheus Operator integration. Use it when the target
@@ -86,13 +98,13 @@ label requirements in the destination monitoring platform. The supplied values
 file is an integration starting point, not a promise that every external
 monitoring installation uses the same discovery conventions.
 
-### 4.3 Air-gapped
+### 4.4 Air-gapped
 
 `k8s/values-airgap.yaml` redirects application images to an internal registry
 and redirects TIB to internal CISA KEV and EPSS mirrors. Runtime images and data
 artifacts must be staged from a connected system before installation.
 
-### 4.4 Disposable validation
+### 4.5 Disposable validation
 
 A k3d cluster is the reference disposable test environment. It runs Kubernetes
 nodes in Docker containers and can be removed as a single unit without changing
@@ -156,7 +168,18 @@ In disconnected mode, these dependencies must resolve to internal mirrors.
 - sufficient access to create namespaces, RBAC, Deployments, Services,
   ConfigMaps, Secrets, and PersistentVolumeClaims
 
-### 6.2 Kubernetes cluster
+### 6.2 Docker host
+
+- Docker Engine with the Compose v2 plugin
+- Linux containers and working container DNS
+- at least 4 CPU cores, 8 GiB RAM, and 30 GiB free storage for a basic test
+- registry and threat-feed connectivity, or the preloaded offline bundle
+- `curl`, Python 3, and GNU Make when using `make smoke`
+
+Docker volumes persist VictoriaMetrics, Grafana, Trivy caches, CIB evidence,
+and TIB state. The default Grafana listener binds only to `127.0.0.1`.
+
+### 6.3 Kubernetes cluster
 
 - supported Linux worker nodes
 - a default StorageClass, or an explicit `global.storageClass`
@@ -181,27 +204,66 @@ Adjust these values for retention, workload count, and vulnerability volume.
 
 Before installation, record:
 
-1. destination cluster and explicit kubeconfig context;
-2. namespace and Helm release name;
-3. StorageClass and capacity;
-4. connected or disconnected operating mode;
-5. internal registry hostname and trust configuration;
-6. outbound proxy or egress policy, if applicable;
-7. image and feed mirror locations;
-8. Grafana credential Secret ownership;
-9. Authentik URL and token Secret if IIB is enabled;
-10. TLS endpoints if PIB is enabled; and
-11. backup and retention requirements.
+1. deployment mode: Docker Compose or Kubernetes;
+2. Docker host, or destination cluster and explicit kubeconfig context;
+3. namespace and Helm release name when using Kubernetes;
+4. storage capacity and retention;
+5. connected or disconnected operating mode;
+6. internal registry hostname and trust configuration;
+7. outbound proxy or egress policy, if applicable;
+8. image and feed mirror locations;
+9. Grafana credential ownership;
+10. Authentik URL and token if IIB is enabled;
+11. TLS endpoints if PIB is enabled; and
+12. backup and retention requirements.
 
 Always use `--kube-context` on Helm commands and `--context` on kubectl commands
 when the operator workstation can access more than one cluster.
 
 ## 8. Connected deployment
 
+### 8.1 Docker Compose
+
+Clone the repository; submodules are not required:
+
+```bash
+git clone https://github.com/iareanthony/xib.git
+cd xib
+cp .env.example .env
+```
+
+Before startup, replace `XIB_GRAFANA_PASSWORD=CHANGE_ME` in `.env`. Review
+`BIND_ADDR`, retention, scan intervals, and `XIB_SCAN_IMAGES`. Start and verify:
+
+```bash
+docker compose pull
+docker compose up -d
+make smoke
+docker compose ps
+```
+
+Grafana is available at `http://localhost:3000` by default. The one-shot
+`initialize-volumes` container must exit with status zero; this is normal and
+prepares non-root collector volume ownership.
+
+Enable optional monitors only after configuring their inputs in `.env`:
+
+```bash
+docker compose --profile pki --profile identity up -d
+```
+
+- `PIB_ENDPOINTS` is a comma-separated list of TLS hosts or `host:port` targets.
+- `AUTHENTIK_URL` and `AUTHENTIK_TOKEN` connect IIB to an existing Authentik.
+
+Use `docker compose logs -f vib cib tib grafana` for troubleshooting. VIB and
+CIB scan the images in `XIB_SCAN_IMAGES`; the host Docker socket is not mounted.
+
+### 8.2 Kubernetes
+
 Clone XIB and select the intended release branch or tag:
 
 ```bash
-git clone --recurse-submodules https://github.com/iareanthony/xib.git
+git clone https://github.com/iareanthony/xib.git
 cd xib
 ```
 
@@ -298,6 +360,32 @@ install:
 No pod should attempt an external download during disconnected operation.
 Validate this with cluster egress logs or an explicit deny-all egress policy in
 a pre-production environment.
+
+### 9.3 Disconnected Docker Compose
+
+On the connected staging system, create both image and supporting-artifact
+archives. Add `-IncludeOllamaModel` only when the selected model is approved and
+the transfer medium has sufficient capacity:
+
+```powershell
+./airgap/export-images.ps1 -OutputDirectory ./bundle
+./airgap/populate-artifacts.ps1 -OutputDirectory ./bundle
+```
+
+On the disconnected Docker host, verify `bundle/SHA256SUMS`, then load the OCI
+archives before starting Compose:
+
+```bash
+docker load --input bundle/xib-images.tar
+docker load --input bundle/xib-artifact-images.tar
+docker compose up -d
+make smoke
+```
+
+Serve the bundled CISA and EPSS data from an approved internal HTTP endpoint
+and set `CISA_KEV_URL` and `EPSS_API_URL` in `.env`. Pre-populate or mount the
+bundled Trivy cache before denying egress. Confirm with firewall logs that no
+container attempts to reach an external registry, database, or feed.
 
 ## 10. Optional component configuration
 
@@ -450,6 +538,23 @@ and committed before rebuilding Grafana.
 
 ## 14. Upgrades
 
+### 14.1 Docker Compose
+
+Back up the named volumes, pull the selected repository release, verify that
+the digest lock changed as expected, and recreate services:
+
+```bash
+git pull --ff-only
+docker compose pull
+docker compose up -d
+make smoke
+```
+
+Do not use `docker compose down -v` during an upgrade; `-v` deletes persistent
+metrics, Grafana state, caches, and collector data.
+
+### 14.2 Kubernetes
+
 1. Review the release notes, image manifest, chart diff, and new permissions.
 2. Back up persistent data.
 3. Render the new chart and compare it with the installed release.
@@ -474,7 +579,11 @@ admin password is also reset in Grafana.
 
 ## 15. Rollback
 
-List release history:
+For Docker Compose, check out the prior approved XIB tag or commit, load its
+image archive if disconnected, and run `docker compose up -d`. Persistent data
+formats may not be backward-compatible; restore volume backups when required.
+
+For Kubernetes, list release history:
 
 ```bash
 helm --kube-context <context> -n xib-system history xib
@@ -492,7 +601,16 @@ component release notes before rolling back across a storage-schema change.
 
 ## 16. Removal
 
-Remove the release:
+Stop Docker Compose while retaining persistent volumes:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` only when permanent deletion of XIB's Docker data
+is explicitly intended and backups have been verified.
+
+Remove the Kubernetes release:
 
 ```bash
 helm --kube-context <context> -n xib-system uninstall xib
