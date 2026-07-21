@@ -448,7 +448,7 @@ Falco requires kernel, host, API-server, and artifact permissions outside the
 normal XIB collector trust boundary.
 
 For Docker, XIB pins the Apache-2.0 `iareanthony/sib` fork at commit
-`ccfa72041a89a05e9f7755cab040360d7f8899cb`. Install and operate it with:
+`11cf796d000dd7a3d0e211ef41698200ae9c77cf`. Install and operate it with:
 
 ```bash
 make sib-install
