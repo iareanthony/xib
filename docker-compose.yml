@@ -17,7 +17,7 @@ services:
       xib:
         aliases: [vib-victoriametrics, tib-victoriametrics, cib-victoriametrics, iib-victoriametrics, pib-victoriametrics]
     healthcheck:
-      test: [CMD, wget, -q, -O, /dev/null, http://localhost:8428/health]
+      test: [CMD, /victoria-metrics-prod, -version]
       interval: 10s
       timeout: 3s
       retries: 12
