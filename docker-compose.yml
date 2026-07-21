@@ -1,113 +1,100 @@
-include:
-  - path: ./vib/docker-compose.yml
-    project_directory: ./vib
-  - path: ./tib/docker-compose.yml
-    project_directory: ./tib
-  - path: ./cib/docker-compose.yml
-    project_directory: ./cib
-  - path: ./iib/docker-compose.yml
-    project_directory: ./iib
-  - path: ./pib/docker-compose.yml
-    project_directory: ./pib
+name: xib
 
-# Shared SSO environment block — merged into every Grafana service.
-# Values are empty until 'make setup-sso' runs; SSO stays disabled until
-# GRAFANA_SSO_ENABLED=true is set in .env.
-x-grafana-sso: &grafana-sso
-  GF_AUTH_GENERIC_OAUTH_ENABLED: "${GRAFANA_SSO_ENABLED:-false}"
-  GF_AUTH_GENERIC_OAUTH_NAME: "Authentik"
-  GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "${AUTHENTIK_GRAFANA_CLIENT_ID:-}"
-  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "${AUTHENTIK_GRAFANA_CLIENT_SECRET:-}"
-  GF_AUTH_GENERIC_OAUTH_SCOPES: "openid email profile"
-  # Auth URL must be browser-accessible; token/userinfo are container-internal
-  GF_AUTH_GENERIC_OAUTH_AUTH_URL: "${AUTHENTIK_EXTERNAL_URL:-http://localhost:9080}/application/o/authorize/"
-  GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "http://iib-server:9000/application/o/token/"
-  GF_AUTH_GENERIC_OAUTH_API_URL: "http://iib-server:9000/application/o/userinfo/"
-  GF_AUTH_SIGNOUT_REDIRECT_URL: "${AUTHENTIK_EXTERNAL_URL:-http://localhost:9080}/application/o/grafana/end-session/"
-  GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
-  GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN: "${GRAFANA_SSO_AUTO_LOGIN:-false}"
-  GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'Grafana Admins') && 'Admin' || 'Viewer'"
+x-collector: &collector
+  restart: unless-stopped
+  depends_on:
+    victoriametrics:
+      condition: service_healthy
+  networks: [xib]
 
 services:
-
-  # ── Integration 1: TIB → VIB cross-reference ──────────────────────────────
-  # Joins tib-collector to the vib network so it can reach vib-victoriametrics
-  # and cross-reference live CVEs against the CISA KEV catalog.
-  tib-collector:
-    networks:
-      - vib
-    environment:
-      VIB_VICTORIAMETRICS_URL: "http://vib-victoriametrics:8428"
-
-  # ── Integration 2: Grafana SSO via Authentik (IIB) ────────────────────────
-  # All Grafana instances join the iib network and receive OAuth2 env vars.
-  # SSO is off by default (GRAFANA_SSO_ENABLED=false) until 'make setup-sso'.
-
-  vib-grafana:
-    networks:
-      - iib
-    environment:
-      <<: *grafana-sso
-
-  tib-grafana:
-    networks:
-      - iib
-    environment:
-      <<: *grafana-sso
-
-  cib-grafana:
-    networks:
-      - iib
-    environment:
-      <<: *grafana-sso
-
-  # iib-grafana is already on the iib network — just add SSO env vars
-  iib-grafana:
-    environment:
-      <<: *grafana-sso
-
-  pib-grafana:
-    networks:
-      - iib
-    environment:
-      <<: *grafana-sso
-
-  # ── XIB unified Grafana ────────────────────────────────────────────────────
-  xib-grafana:
-    image: grafana/grafana:latest
-    container_name: xib-grafana
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.121.0
     restart: unless-stopped
-    ports:
-      - "${BIND_ADDR:-127.0.0.1}:${XIB_GRAFANA_PORT:-3000}:3000"
+    command: ["-storageDataPath=/data", "-retentionPeriod=${XIB_RETENTION:-90d}"]
+    volumes: ["metrics-data:/data"]
+    networks:
+      xib:
+        aliases: [vib-victoriametrics, tib-victoriametrics, cib-victoriametrics, iib-victoriametrics, pib-victoriametrics]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://localhost:8428/health]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  vib:
+    <<: *collector
+    image: ghcr.io/iareanthony/xib-vib-scanner@sha256:f17e85c9ccc00194c959522fc75eaab0a5e8ab709065bdec76837199e01af2cd
+    volumes: ["vib-trivy-cache:/data/trivy-cache"]
     environment:
-      GF_SECURITY_ADMIN_USER: admin
+      VICTORIAMETRICS_URL: http://victoriametrics:8428
+      TRIVY_CACHE_DIR: /data/trivy-cache
+      SCAN_INTERVAL_HOURS: "${VIB_SCAN_INTERVAL_HOURS:-6}"
+      SEVERITY_FILTER: "${VIB_SEVERITY_FILTER:-UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL}"
+      ADDITIONAL_IMAGES: "${XIB_SCAN_IMAGES:-ghcr.io/iareanthony/xib-vib-scanner:0.2.0,ghcr.io/iareanthony/xib-cib-checker:0.2.0,ghcr.io/iareanthony/xib-tib-collector:0.2.0,ghcr.io/iareanthony/xib-pib-monitor:0.2.0,ghcr.io/iareanthony/xib-iib-monitor:0.2.0}"
+
+  cib:
+    <<: *collector
+    image: ghcr.io/iareanthony/xib-cib-checker@sha256:fb815194eabb0a2048871ad174ee479050b65e6b817c111527ed4fabb58e85f3
+    volumes: ["cib-trivy-cache:/data/trivy-cache"]
+    environment:
+      VICTORIAMETRICS_URL: http://victoriametrics:8428
+      TRIVY_CACHE_DIR: /data/trivy-cache
+      SCAN_INTERVAL_HOURS: "${CIB_SCAN_INTERVAL_HOURS:-6}"
+      ADDITIONAL_IMAGES: "${XIB_SCAN_IMAGES:-ghcr.io/iareanthony/xib-vib-scanner:0.2.0,ghcr.io/iareanthony/xib-cib-checker:0.2.0,ghcr.io/iareanthony/xib-tib-collector:0.2.0,ghcr.io/iareanthony/xib-pib-monitor:0.2.0,ghcr.io/iareanthony/xib-iib-monitor:0.2.0}"
+
+  tib:
+    <<: *collector
+    image: ghcr.io/iareanthony/xib-tib-collector@sha256:0b9fe36da1e6ad2bf8760103e3543fc4d366a38671f1b07a63c4c2da412a7902
+    environment:
+      VICTORIAMETRICS_URL: http://victoriametrics:8428
+      VIB_VICTORIAMETRICS_URL: http://victoriametrics:8428
+      SYNC_INTERVAL_HOURS: "${TIB_SYNC_INTERVAL_HOURS:-6}"
+      CISA_KEV_URL: "${CISA_KEV_URL:-https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json}"
+      EPSS_API_URL: "${EPSS_API_URL:-https://api.first.org/data/v1/epss}"
+
+  pib:
+    profiles: [pki]
+    <<: *collector
+    image: ghcr.io/iareanthony/xib-pib-monitor@sha256:8171cbd2629e79d97ed0eaedfd4d18d24cc1875bce8cb154ab2c0f9eeddf3f1b
+    environment:
+      VICTORIAMETRICS_URL: http://victoriametrics:8428
+      ENDPOINTS: "${PIB_ENDPOINTS:-}"
+      CHECK_INTERVAL_HOURS: "${PIB_CHECK_INTERVAL_HOURS:-6}"
+
+  iib:
+    profiles: [identity]
+    restart: unless-stopped
+    image: ghcr.io/iareanthony/xib-iib-monitor@sha256:64e93f7c69546056b3a6edca2f0a1a3c1639545a6a95c831dffb13908613a3e8
+    environment:
+      AUTHENTIK_URL: "${AUTHENTIK_URL:-http://host.docker.internal:9000}"
+      AUTHENTIK_TOKEN: "${AUTHENTIK_TOKEN:-}"
+      INTERVAL_SECONDS: "${IIB_INTERVAL_SECONDS:-300}"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [xib]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    ports: ["${BIND_ADDR:-127.0.0.1}:${XIB_GRAFANA_PORT:-3000}:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: "${XIB_GRAFANA_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${XIB_GRAFANA_PASSWORD:-changeme}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/xib-overview.json
-      <<: *grafana-sso
     volumes:
-      - xib-grafana-data:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/etc/grafana/dashboards:ro
-    networks:
-      - vib
-      - tib
-      - cib
-      - iib
-      - pib
+      - ./k8s/dashboards:/etc/grafana/dashboards:ro
     depends_on:
-      - vib-victoriametrics
-      - tib-victoriametrics
-      - cib-victoriametrics
-      - iib-victoriametrics
-      - pib-victoriametrics
+      victoriametrics:
+        condition: service_healthy
+    networks: [xib]
 
-  # ── Integration 3: PIB step-ca on IIB network ─────────────────────────────
-  # Allows step-ca to reach Authentik's OIDC discovery endpoint for the
-  # OIDC provisioner configured by 'make setup-sso'.
-  pib-ca:
-    networks:
-      - iib
-
+networks:
+  xib: {}
 volumes:
-  xib-grafana-data:
+  metrics-data: {}
+  grafana-data: {}
+  vib-trivy-cache: {}
+  cib-trivy-cache: {}

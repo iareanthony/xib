@@ -14,7 +14,12 @@ For the operating model and complete deployment lifecycle, see the
 make up
 ```
 
-That's it. All five tools start up, secrets are auto-generated on first run, and the cross-project dashboard is available at http://localhost:3000.
+That starts VIB, CIB, TIB, VictoriaMetrics, and the unified Grafana. The PIB
+and IIB monitors are optional profiles because they require TLS targets or an
+existing Authentik deployment.
+
+The Compose deployment is self-contained: it uses the same immutable images
+as Kubernetes and does not require Git submodules.
 
 ---
 
@@ -37,7 +42,7 @@ Each sub-project is a git submodule with its own independent `docker compose up`
 ## Quick start
 
 ```bash
-git clone --recurse-submodules git@github.com:matijazezelj/xib.git
+git clone https://github.com/iareanthony/xib.git
 cd xib
 make up
 ```

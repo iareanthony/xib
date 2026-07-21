@@ -20,15 +20,7 @@ setup:
 		echo "Creating .env from .env.example..."; \
 		cp .env.example .env; \
 	fi
-	@echo "Initialising sub-project environments..."
-	@for dir in vib tib cib iib pib; do \
-		if [ ! -f $$dir/.env ] && [ -f $$dir/.env.example ]; then \
-			echo "  $$dir: creating .env from .env.example"; \
-			cp $$dir/.env.example $$dir/.env; \
-		fi; \
-	done
-	@if [ -f iib/Makefile ]; then $(MAKE) -C iib generate-secrets; fi
-	@if [ -f pib/Makefile ]; then $(MAKE) -C pib ca-password; fi
+	@echo "XIB Compose environment ready."
 
 # Wire up Grafana SSO and PIB OIDC provisioner via Authentik.
 # Run this once after 'make up' and Authentik has fully initialised.
