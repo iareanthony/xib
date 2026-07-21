@@ -17,7 +17,7 @@ services:
     command: ["chown -R 10001:10001 /volumes/vib /volumes/cib /volumes/tib"]
     volumes:
       - vib-trivy-cache:/volumes/vib
-      - cib-trivy-cache:/volumes/cib
+      - cib-data:/volumes/cib
       - tib-data:/volumes/tib
     networks: [xib]
     restart: "no"
@@ -50,7 +50,7 @@ services:
   cib:
     <<: *collector
     image: ghcr.io/iareanthony/xib-cib-checker@sha256:fb815194eabb0a2048871ad174ee479050b65e6b817c111527ed4fabb58e85f3
-    volumes: ["cib-trivy-cache:/data/trivy-cache"]
+    volumes: ["cib-data:/data"]
     environment:
       VICTORIAMETRICS_URL: http://victoriametrics:8428
       TRIVY_CACHE_DIR: /data/trivy-cache
@@ -112,5 +112,5 @@ volumes:
   metrics-data: {}
   grafana-data: {}
   vib-trivy-cache: {}
-  cib-trivy-cache: {}
+  cib-data: {}
   tib-data: {}
