@@ -23,8 +23,15 @@ prepare() {
 }
 
 case "$action" in
-  install) prepare; make -C "$sib_dir" install ;;
-  start)   make -C "$sib_dir" start ;;
+  install)
+    prepare
+    make -C "$sib_dir" network install-storage-vm install-alerting install-detection
+    SIB_DIR="$sib_dir" docker compose -f "$root/docker-compose.yml" -f "$root/docker-compose.sib.yml" up -d grafana
+    ;;
+  start)
+    make -C "$sib_dir" start-storage-vm start-alerting start-detection
+    SIB_DIR="$sib_dir" docker compose -f "$root/docker-compose.yml" -f "$root/docker-compose.sib.yml" up -d grafana
+    ;;
   stop)    make -C "$sib_dir" stop ;;
   health)  make -C "$sib_dir" health ;;
   logs)    make -C "$sib_dir" logs ;;

@@ -458,11 +458,17 @@ make sib-stop
 make sib-start
 ```
 
-The integration checks out SIB under `.xib-components/sib` and assigns separate
-host ports: Grafana `3400`, VictoriaLogs `9428`, VictoriaMetrics `8429`, and
-Falcosidekick `2801`. SIB Falco runs privileged, mounts `/dev`, `/proc`, `/etc`,
-and the Docker socket, and uses modern eBPF. Treat it as host-root-equivalent.
-It requires a supported Linux kernel and does not support Docker Desktop.
+The integration checks out SIB under `.xib-components/sib` and deploys Falco,
+Falcosidekick, VictoriaLogs, VictoriaMetrics, and node-exporter. It does not
+deploy SIB's separate Grafana. `docker-compose.sib.yml` connects the existing
+XIB Grafana to `sib-network`, installs the VictoriaLogs datasource plugin, and
+provisions the SIB datasources and dashboards into the **SIB Runtime Security**
+folder at port `3000`. SIB endpoints use VictoriaLogs `9428`, VictoriaMetrics
+`8429`, and Falcosidekick `2801`.
+
+SIB Falco runs privileged, mounts `/dev`, `/proc`, `/etc`, and the Docker
+socket, and uses modern eBPF. Treat it as host-root-equivalent. It requires a
+supported Linux kernel and does not support Docker Desktop.
 
 For Kubernetes, `iareanthony/sib-k8s` remains a separate Helm release. Install
 the vendored `sib-k8s` chart from the same offline transfer set when runtime and

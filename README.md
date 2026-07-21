@@ -91,10 +91,12 @@ make sib-install
 make sib-health
 ```
 
-SIB Grafana uses `http://localhost:3400`; VictoriaLogs uses port `9428`,
-VictoriaMetrics `8429`, and Falcosidekick `2801`. Use `make sib-stop`,
-`make sib-start`, and `make sib-logs` for lifecycle operations. SIB requires a
-Linux host and privileged kernel/eBPF access; Docker Desktop is not supported.
+SIB dashboards and datasources are provisioned into the existing XIB Grafana
+at `http://localhost:3000`; no second Grafana is deployed. VictoriaLogs uses
+port `9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. Use
+`make sib-stop`, `make sib-start`, and `make sib-logs` for lifecycle operations.
+SIB requires a Linux host and privileged kernel/eBPF access; Docker Desktop is
+not supported.
 
 ---
 

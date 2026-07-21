@@ -16,8 +16,7 @@
     "falcosecurity/falcosidekick:2.29.0",
     "victoriametrics/victoria-logs:v1.50.0",
     "victoriametrics/victoria-metrics:v1.144.0",
-    "prom/node-exporter:v1.11.1",
-    "grafana/grafana:11.4.0"
+    "prom/node-exporter:v1.11.1"
   ],
   "ollamaImage": "ollama/ollama:0.9.6",
   "ollamaModel": "llama3.1:8b"
