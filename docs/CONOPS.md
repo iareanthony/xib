@@ -233,7 +233,11 @@ cp .env.example .env
 ```
 
 Before startup, replace `XIB_GRAFANA_PASSWORD=CHANGE_ME` in `.env`. Review
-`BIND_ADDR`, retention, scan intervals, and `XIB_SCAN_IMAGES`. Start and verify:
+`BIND_ADDR`, retention, scan intervals, and `XIB_SCAN_IMAGES`. Also review
+`XIB_CONTAINER_PREFIX` if more than one XIB stack will run on the same Docker
+host. Containers use deterministic names such as `xib-grafana`, `xib-vib`, and
+`xib-victoriametrics`; changing the prefix prevents collisions between stacks.
+Start and verify:
 
 ```bash
 docker compose pull
@@ -448,7 +452,7 @@ Falco requires kernel, host, API-server, and artifact permissions outside the
 normal XIB collector trust boundary.
 
 For Docker, XIB pins the Apache-2.0 `iareanthony/sib` fork at commit
-`11cf796d000dd7a3d0e211ef41698200ae9c77cf`. Install and operate it with:
+`af84d2f26081dbc80d23e6830d1855082ecc274e`. Install and operate it with:
 
 ```bash
 make sib-install

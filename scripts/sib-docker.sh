@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 sib_dir=${SIB_DIR:-"$root/.xib-components/sib"}
 sib_repo=${SIB_REPOSITORY:-https://github.com/iareanthony/sib.git}
-sib_commit=${SIB_COMMIT:-11cf796d000dd7a3d0e211ef41698200ae9c77cf}
+sib_commit=${SIB_COMMIT:-af84d2f26081dbc80d23e6830d1855082ecc274e}
 action=${1:-install}
 
 prepare() {
