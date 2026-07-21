@@ -5,9 +5,23 @@ x-collector: &collector
   depends_on:
     victoriametrics:
       condition: service_healthy
+    initialize-volumes:
+      condition: service_completed_successfully
   networks: [xib]
 
 services:
+  initialize-volumes:
+    image: grafana/grafana:12.1.0
+    user: "0:0"
+    entrypoint: [sh, -c]
+    command: ["chown -R 10001:10001 /volumes/vib /volumes/cib /volumes/tib"]
+    volumes:
+      - vib-trivy-cache:/volumes/vib
+      - cib-trivy-cache:/volumes/cib
+      - tib-data:/volumes/tib
+    networks: [xib]
+    restart: "no"
+
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.121.0
     restart: unless-stopped
@@ -46,6 +60,7 @@ services:
   tib:
     <<: *collector
     image: ghcr.io/iareanthony/xib-tib-collector@sha256:0b9fe36da1e6ad2bf8760103e3543fc4d366a38671f1b07a63c4c2da412a7902
+    volumes: ["tib-data:/data"]
     environment:
       VICTORIAMETRICS_URL: http://victoriametrics:8428
       VIB_VICTORIAMETRICS_URL: http://victoriametrics:8428
@@ -98,3 +113,4 @@ volumes:
   grafana-data: {}
   vib-trivy-cache: {}
   cib-trivy-cache: {}
+  tib-data: {}
