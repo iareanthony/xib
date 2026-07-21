@@ -59,6 +59,21 @@ or load the images, and install with `airgap/install.ps1`.
 
 Open **http://localhost:3000** — the XIB Security Overview dashboard loads automatically.
 
+### Optional Docker socket discovery
+
+The default deployment scans `XIB_SCAN_IMAGES` without mounting the host Docker
+socket. On a trusted Linux host, enable dynamic local image discovery:
+
+```bash
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" >> .env
+make up-socket
+```
+
+Validate with `docker compose -f docker-compose.yml -f
+docker-compose.socket.yml config --quiet`. Docker socket API access is
+effectively host-root access even with a read-only bind mount, so enable this
+mode only for trusted images and operators.
+
 Optional monitors can be enabled after their settings are added to `.env`:
 
 ```bash

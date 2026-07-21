@@ -1,7 +1,12 @@
-.PHONY: up down restart logs build clean setup smoke
+.PHONY: up up-socket down restart logs build clean setup smoke
 
 up: setup
 	docker compose up -d
+
+up-socket: setup
+	@test -n "$(DOCKER_GID)" || grep -qE '^DOCKER_GID=[0-9]+$$' .env || \
+		(echo "Set DOCKER_GID in .env: stat -c '%g' /var/run/docker.sock"; exit 1)
+	docker compose -f docker-compose.yml -f docker-compose.socket.yml up -d
 
 down:
 	docker compose down

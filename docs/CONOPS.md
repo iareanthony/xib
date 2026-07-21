@@ -258,6 +258,29 @@ docker compose --profile pki --profile identity up -d
 Use `docker compose logs -f vib cib tib grafana` for troubleshooting. VIB and
 CIB scan the images in `XIB_SCAN_IMAGES`; the host Docker socket is not mounted.
 
+#### Optional Docker socket discovery
+
+On a trusted Linux Docker host, enable dynamic discovery of local containers
+and images with the opt-in overlay:
+
+```bash
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" >> .env
+make up-socket
+```
+
+The overlay mounts `/var/run/docker.sock` into VIB and CIB and adds its numeric
+group owner to the non-root collector processes. `XIB_SCAN_IMAGES` is combined
+with dynamically discovered images.
+
+Treat Docker socket access as host-root-equivalent. A read-only bind mount does
+not make Docker API operations read-only. Do not enable the overlay on a shared
+or untrusted host, and do not expose the Docker API over an unauthenticated TCP
+listener. Validate the merged definition before use:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.socket.yml config --quiet
+```
+
 ### 8.2 Kubernetes
 
 Clone XIB and select the intended release branch or tag:
