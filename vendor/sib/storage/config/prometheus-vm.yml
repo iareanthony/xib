@@ -1,0 +1,49 @@
+# ==============================================
+# Prometheus-compatible Configuration for VictoriaMetrics
+# ==============================================
+# VictoriaMetrics uses the same scrape config format as Prometheus
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+
+# Scrape configurations
+scrape_configs:
+  # VictoriaMetrics self-monitoring
+  - job_name: 'victoriametrics'
+    static_configs:
+      - targets: ['localhost:8428']
+        labels:
+          instance: 'sib-victoriametrics'
+
+  # Host metrics via node_exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['sib-node-exporter:9100']
+        labels:
+          instance: 'sib-host'
+          host: 'sib-host'
+
+  # Falcosidekick metrics
+  - job_name: 'falcosidekick'
+    static_configs:
+      - targets: ['sib-sidekick:2801']
+        labels:
+          instance: 'sib-sidekick'
+    metrics_path: '/metrics'
+
+  # VictoriaLogs metrics
+  - job_name: 'victorialogs'
+    static_configs:
+      - targets: ['sib-victorialogs:9428']
+        labels:
+          instance: 'sib-victorialogs'
+    metrics_path: '/metrics'
+
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['sib-grafana:3000']
+        labels:
+          instance: 'sib-grafana'
+    metrics_path: '/metrics'

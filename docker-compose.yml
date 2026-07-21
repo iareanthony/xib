@@ -103,20 +103,133 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${XIB_GRAFANA_PASSWORD:-changeme}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/xib-overview.json
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./k8s/dashboards:/etc/grafana/dashboards:ro
+      - ./vendor/sib/grafana/provisioning/dashboards/victorialogs:/etc/grafana/sib-dashboards:ro
     depends_on:
       victoriametrics:
         condition: service_healthy
-    networks: [xib]
+    networks:
+      xib: {}
+      sib:
+        aliases: [sib-grafana]
+
+  sib-victorialogs:
+    profiles: [sib]
+    container_name: ${SIB_CONTAINER_PREFIX:-sib}-victorialogs
+    image: victoriametrics/victoria-logs:v1.50.0
+    restart: unless-stopped
+    ports: ["${SIB_STORAGE_BIND:-127.0.0.1}:${SIB_VICTORIALOGS_PORT:-9428}:9428"]
+    command: ["-storageDataPath=/vlogs", "-retentionPeriod=${SIB_LOG_RETENTION:-168h}"]
+    volumes: [sib-victorialogs-data:/vlogs]
+    networks: [sib]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:9428/health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  sib-victoriametrics:
+    profiles: [sib]
+    container_name: ${SIB_CONTAINER_PREFIX:-sib}-victoriametrics
+    image: victoriametrics/victoria-metrics:v1.144.0
+    restart: unless-stopped
+    ports: ["${SIB_STORAGE_BIND:-127.0.0.1}:${SIB_VICTORIAMETRICS_PORT:-8429}:8428"]
+    command:
+      - -storageDataPath=/vmstorage
+      - -retentionPeriod=${SIB_METRICS_RETENTION:-15d}
+      - -httpListenAddr=:8428
+      - -promscrape.config=/etc/prometheus/prometheus.yml
+    volumes:
+      - sib-victoriametrics-data:/vmstorage
+      - ./vendor/sib/storage/config/prometheus-vm.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      sib:
+        aliases: [sib-victoriametrics]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8428/health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  sib-node-exporter:
+    profiles: [sib]
+    container_name: ${SIB_CONTAINER_PREFIX:-sib}-node-exporter
+    image: prom/node-exporter:v1.11.1
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    networks: [sib]
+
+  sib-sidekick:
+    profiles: [sib]
+    container_name: ${SIB_CONTAINER_PREFIX:-sib}-sidekick
+    image: falcosecurity/falcosidekick:2.29.0
+    restart: unless-stopped
+    ports: ["${SIB_SIDEKICK_BIND:-127.0.0.1}:${SIB_SIDEKICK_PORT:-2801}:2801"]
+    command: [-c, /etc/falcosidekick/config.yaml]
+    volumes:
+      - ./sib/config/falcosidekick.yaml:/etc/falcosidekick/config.yaml:ro
+    networks: [sib]
+    depends_on:
+      sib-victorialogs:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, nc -z 127.0.0.1 2801]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  sib-falco:
+    profiles: [sib]
+    container_name: ${SIB_CONTAINER_PREFIX:-sib}-falco
+    hostname: sib-host
+    image: falcosecurity/falco:0.44.0
+    privileged: true
+    restart: unless-stopped
+    environment:
+      HOST_ROOT: /host
+      FALCOCTL_DRIVER_TYPE: modern_ebpf
+    volumes:
+      - ./sib/config/falco.yaml:/etc/falco/falco.yaml:ro
+      - ./vendor/sib/detection/config/rules:/etc/falco/rules:ro
+      - /var/run/docker.sock:/host/var/run/docker.sock:ro
+      - /dev:/host/dev:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+    networks: [sib]
+    depends_on:
+      sib-sidekick:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, -f, http://127.0.0.1:8765/healthz]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 networks:
   xib: {}
+  sib: {}
 volumes:
   metrics-data: {}
   grafana-data: {}
   vib-trivy-cache: {}
   cib-data: {}
   tib-data: {}
+  sib-victorialogs-data: {}
+  sib-victoriametrics-data: {}

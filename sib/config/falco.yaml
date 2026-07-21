@@ -1,0 +1,70 @@
+engine:
+  kind: modern_ebpf
+  modern_ebpf:
+    cpus_for_each_buffer: 2
+    buf_size_preset: 4
+
+json_output: true
+json_include_output_property: true
+json_include_tags_property: true
+time_format_iso_8601: true
+
+http_output:
+  enabled: true
+  url: http://sib-sidekick:2801/
+  user_agent: falcosidekick
+
+priority: notice
+rules_files:
+  - /etc/falco/rules/falco_rules.yaml
+  - /etc/falco/rules/falco-incubating_rules.yaml
+  - /etc/falco/rules/falco-sandbox_rules.yaml
+  - /etc/falco/rules/custom_rules.yaml
+watch_config_files: true
+buffered_outputs: true
+output_timeout: 2000
+
+webserver:
+  enabled: true
+  listen_port: 8765
+  k8s_healthz_endpoint: /healthz
+  ssl_enabled: false
+
+metrics:
+  enabled: true
+  interval: 1h
+  output_rule: true
+  rules_counters_enabled: true
+  resource_utilization_enabled: true
+  state_counters_enabled: true
+  kernel_event_counters_enabled: true
+  libbpf_stats_enabled: true
+  convert_memory_to_mb: true
+  include_empty_values: false
+
+syscall_event_drops:
+  threshold: 0.1
+  actions: [log, alert]
+  rate: 0.03333
+  max_burst: 1
+
+container_engines:
+  docker:
+    enabled: true
+  cri:
+    enabled: false
+  podman:
+    enabled: false
+  lxc:
+    enabled: false
+  libvirt_lxc:
+    enabled: false
+  bpm:
+    enabled: false
+
+log_stderr: true
+log_syslog: false
+log_level: info
+base_syscalls:
+  custom_set: []
+  repair: false

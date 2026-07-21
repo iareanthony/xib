@@ -451,24 +451,26 @@ SIB is intentionally managed as a separate runtime-security deployment because
 Falco requires kernel, host, API-server, and artifact permissions outside the
 normal XIB collector trust boundary.
 
-For Docker, XIB pins the Apache-2.0 `iareanthony/sib` fork at commit
-`af84d2f26081dbc80d23e6830d1855082ecc274e`. Install and operate it with:
+For Docker, XIB vendors the Apache-2.0 `iareanthony/sib` fork at commit
+`af84d2f26081dbc80d23e6830d1855082ecc274e`. The default `.env.example`
+activates the `sib` Compose profile, so the complete Docker environment starts
+without Make or a secondary repository checkout:
 
 ```bash
-make sib-install
-make sib-health
-make sib-logs
-make sib-stop
-make sib-start
+cp .env.example .env
+docker compose up -d
+docker compose ps
+docker compose logs -f sib-falco sib-sidekick
 ```
 
-The integration checks out SIB under `.xib-components/sib` and deploys Falco,
-Falcosidekick, VictoriaLogs, VictoriaMetrics, and node-exporter. It does not
-deploy SIB's separate Grafana. `docker-compose.sib.yml` connects the existing
-XIB Grafana to `sib-network`, installs the VictoriaLogs datasource plugin, and
-provisions the SIB datasources and dashboards into the **SIB Runtime Security**
-folder at port `3000`. SIB endpoints use VictoriaLogs `9428`, VictoriaMetrics
-`8429`, and Falcosidekick `2801`.
+The main `docker-compose.yml` deploys Falco, Falcosidekick, VictoriaLogs,
+VictoriaMetrics, and node-exporter. It does not deploy a second Grafana. The
+existing XIB Grafana joins the SIB network, installs the VictoriaLogs datasource
+plugin, and provisions the vendored SIB datasources and dashboards into the
+**SIB Runtime Security** folder at port `3000`. SIB endpoints use VictoriaLogs
+`9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. Operators can set
+`COMPOSE_PROFILES=` to omit SIB or invoke it explicitly with
+`docker compose --profile sib up -d`.
 
 SIB Falco runs privileged, mounts `/dev`, `/proc`, `/etc`, and the Docker
 socket, and uses modern eBPF. Treat it as host-root-equivalent. It requires a

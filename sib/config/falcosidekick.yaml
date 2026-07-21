@@ -1,0 +1,6 @@
+debug: false
+loki:
+  hostport: http://sib-victorialogs:9428/insert
+webserver:
+  listenaddress: 0.0.0.0
+  listenport: 2801

@@ -1,0 +1,772 @@
+# ==============================================
+# SIB Custom Falco Rules
+# ==============================================
+# Add your custom security rules here.
+# These rules are loaded after the default rules.
+# ==============================================
+
+# ---------------------------------------------
+# Critical Test Rule (for verification)
+# ---------------------------------------------
+
+- rule: Critical Test - Shadow File Read
+  desc: Triggers Critical alert when /etc/shadow is read
+  condition: >
+    open_read and
+    fd.name = "/etc/shadow"
+  output: "CRITICAL: Shadow file accessed user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [test, critical, shadow]
+
+# ---------------------------------------------
+# Cryptocurrency Mining Detection
+# ---------------------------------------------
+
+- rule: Detect Cryptocurrency Mining Process
+  desc: Detects known cryptocurrency mining processes
+  condition: >
+    spawned_process and
+    (proc.name in (xmrig, minerd, cpuminer, ethminer, cgminer, bfgminer,
+                   nbminer, t-rex, phoenixminer, lolminer, gminer) or
+     proc.cmdline contains "stratum+tcp" or
+     proc.cmdline contains "pool.minexmr" or
+     proc.cmdline contains "nanopool" or
+     proc.cmdline contains "nicehash")
+  output: "Cryptocurrency miner detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [cryptomining, mitre_impact, T1496]
+
+- rule: Detect Cryptocurrency Mining Network Connection
+  desc: Detects network connections to known mining pool ports
+  condition: >
+    outbound and
+    fd.sport in (3333, 4444, 8888, 14444, 45700)
+  output: "Possible mining pool connection user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [cryptomining, network, mitre_impact]
+
+# ---------------------------------------------
+# Container Security
+# ---------------------------------------------
+
+- rule: Container Escape via Mount
+  desc: Detects potential container escape via mount manipulation
+  condition: >
+    spawned_process and
+    container and
+    proc.name = mount and
+    (proc.cmdline contains "/host" or
+     proc.cmdline contains "nsenter" or
+     proc.cmdline contains "/proc/1")
+  output: "Potential container escape via mount user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [container, escape, mitre_privilege_escalation, T1611]
+
+- rule: Container Running as Root
+  desc: Detects containers running processes as root
+  condition: >
+    spawned_process and
+    container and
+    user.uid = 0 and
+    not proc.name in (init, systemd, containerd, dockerd, runc)
+  output: "Container process running as root user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [container, root, mitre_privilege_escalation]
+
+# ---------------------------------------------
+# Suspicious Network Activity
+# ---------------------------------------------
+
+- rule: Outbound Connection to Suspicious Port
+  desc: Detects outbound connections to commonly abused ports
+  condition: >
+    outbound and
+    (fd.sport in (4444, 5555, 6666, 7777, 8888, 9999, 1337, 31337) or
+     fd.sport > 60000)
+  output: "Suspicious outbound connection user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [network, suspicious, mitre_command_and_control]
+
+# Note: DNS query detection for suspicious domains requires network monitoring
+# tools or Falco plugins. Port-based detection is limited.
+
+# ---------------------------------------------
+# Credential Access
+# ---------------------------------------------
+
+- rule: Read AWS Credentials File
+  desc: Detects reading of AWS credentials file
+  condition: >
+    open_read and
+    (fd.name = "/root/.aws/credentials" or
+     fd.name contains "/.aws/credentials")
+  output: "AWS credentials file accessed user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [credential_access, aws, mitre_credential_access, T1552]
+
+- rule: Read Kubernetes Secrets
+  desc: Detects access to Kubernetes secrets directory
+  condition: >
+    open_read and
+    fd.name startswith "/var/run/secrets/kubernetes.io"
+  output: "Kubernetes secrets accessed user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [credential_access, kubernetes, mitre_credential_access]
+
+- rule: Read SSH Private Key
+  desc: Detects reading of SSH private keys
+  condition: >
+    open_read and
+    (fd.name contains "id_rsa" or
+     fd.name contains "id_ed25519" or
+     fd.name contains "id_ecdsa" or
+     fd.name contains "id_dsa") and
+    not fd.name contains ".pub"
+  output: "SSH private key accessed user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [credential_access, ssh, mitre_credential_access, T1552.004]
+
+# ---------------------------------------------
+# Persistence
+# ---------------------------------------------
+
+- rule: Crontab Modified
+  desc: Detects modifications to crontab files
+  condition: >
+    (open_write or evt.type = rename) and
+    (fd.name startswith "/etc/cron" or
+     fd.name startswith "/var/spool/cron")
+  output: "Crontab modified user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [persistence, cron, mitre_persistence, T1053.003]
+
+- rule: Systemd Service Created
+  desc: Detects creation of new systemd services
+  condition: >
+    open_write and
+    (fd.name startswith "/etc/systemd/system" or
+     fd.name startswith "/lib/systemd/system") and
+    fd.name endswith ".service"
+  output: "Systemd service created user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [persistence, systemd, mitre_persistence, T1543.002]
+
+# ---------------------------------------------
+# Suspicious Commands
+# ---------------------------------------------
+
+- rule: Base64 Decode Execution
+  desc: Detects base64 decode being piped to shell (common attack pattern)
+  condition: >
+    spawned_process and
+    (proc.cmdline contains "base64 -d" or
+     proc.cmdline contains "base64 --decode") and
+    (proc.cmdline contains "| sh" or
+     proc.cmdline contains "| bash" or
+     proc.cmdline contains "|sh" or
+     proc.cmdline contains "|bash")
+  output: "Base64 decode piped to shell user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [execution, base64, mitre_execution, T1059]
+
+- rule: Wget or Curl to Suspicious Location
+  desc: Detects downloading files to tmp or suspicious locations
+  condition: >
+    spawned_process and
+    proc.name in (wget, curl) and
+    (proc.cmdline contains "/tmp/" or
+     proc.cmdline contains "/dev/shm/" or
+     proc.cmdline contains "/var/tmp/")
+  output: "Download to suspicious location user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [execution, download, mitre_execution]
+
+# ---------------------------------------------
+# Initial Access Detection (T1190, T1133)
+# ---------------------------------------------
+
+- rule: Reverse Shell Spawned
+  desc: Detects reverse shell patterns commonly used in initial access
+  condition: >
+    spawned_process and
+    ((proc.cmdline contains "/dev/tcp/" or
+      proc.cmdline contains "nc -e" or
+      proc.cmdline contains "ncat -e" or
+      proc.cmdline contains "bash -i" or
+      proc.cmdline contains "python -c" and proc.cmdline contains "socket") or
+     (proc.name in (nc, ncat, netcat) and
+      (proc.cmdline contains "-e" or proc.cmdline contains "-c")))
+  output: "Reverse shell detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [initial_access, reverse_shell, mitre_initial_access, T1059]
+
+- rule: Remote Script Execution
+  desc: Detects curl/wget piped directly to shell (drive-by download)
+  condition: >
+    spawned_process and
+    (proc.cmdline contains "curl" or proc.cmdline contains "wget") and
+    (proc.cmdline contains "| sh" or proc.cmdline contains "| bash" or
+     proc.cmdline contains "|sh" or proc.cmdline contains "|bash")
+  output: "Remote script execution detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [initial_access, remote_execution, mitre_initial_access, T1190]
+
+# ---------------------------------------------
+# Discovery Detection (T1082, T1083, T1057)
+# ---------------------------------------------
+
+- rule: System Information Discovery
+  desc: Detects reconnaissance commands for system enumeration
+  condition: >
+    spawned_process and
+    proc.name in (uname, hostnamectl, lsb_release, cat) and
+    (proc.cmdline contains "os-release" or
+     proc.cmdline contains "/etc/issue" or
+     proc.cmdline contains "-a" and proc.name = "uname")
+  output: "System information discovery user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [discovery, reconnaissance, mitre_discovery, T1082]
+
+- rule: Network Configuration Discovery
+  desc: Detects network enumeration commands
+  condition: >
+    spawned_process and
+    proc.name in (ifconfig, ip, netstat, ss, arp, route)
+  output: "Network discovery user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [discovery, network, mitre_discovery, T1016]
+
+- rule: Process Discovery
+  desc: Detects process enumeration
+  condition: >
+    spawned_process and
+    proc.name in (ps, top, htop, pstree) and
+    (proc.cmdline contains "aux" or proc.cmdline contains "-ef" or
+     proc.cmdline contains "-e")
+  output: "Process discovery user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [discovery, processes, mitre_discovery, T1057]
+
+- rule: Account Discovery
+  desc: Detects user enumeration commands
+  condition: >
+    spawned_process and
+    (proc.name in (whoami, id, who, w, last, lastlog, users) or
+     (proc.name = "cat" and proc.cmdline contains "/etc/passwd") or
+     (proc.name = "getent" and proc.cmdline contains "passwd"))
+  output: "Account discovery user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [discovery, accounts, mitre_discovery, T1087]
+
+# ---------------------------------------------
+# Lateral Movement Detection (T1021)
+# ---------------------------------------------
+
+- rule: SSH to Internal Host
+  desc: Detects SSH connections from containers
+  condition: >
+    spawned_process and
+    proc.name in (ssh, scp, sftp) and
+    container
+  output: "SSH from container detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [lateral_movement, ssh, mitre_lateral_movement, T1021.004]
+
+- rule: Remote File Copy
+  desc: Detects tools used for lateral movement file transfer
+  condition: >
+    spawned_process and
+    proc.name in (scp, rsync, rcp) and
+    container
+  output: "Remote file copy detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [lateral_movement, file_transfer, mitre_lateral_movement, T1021]
+
+- rule: Network Scan Detected
+  desc: Detects network scanning tools often used before lateral movement
+  condition: >
+    spawned_process and
+    proc.name in (nmap, masscan, zmap, nc, netcat, ncat)
+  output: "Network scanning detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [lateral_movement, scanning, mitre_lateral_movement, T1046]
+
+# ---------------------------------------------
+# Exfiltration Detection (T1048, T1041)
+# ---------------------------------------------
+
+- rule: Data Exfiltration via Curl
+  desc: Detects data being posted externally via curl
+  condition: >
+    spawned_process and
+    proc.name = "curl" and
+    (proc.cmdline contains "-X POST" or proc.cmdline contains "--data" or
+     proc.cmdline contains "-d " or proc.cmdline contains "-F ")
+  output: "Potential data exfiltration via curl user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [exfiltration, curl, mitre_exfiltration, T1048]
+
+- rule: Archive Creation Before Exfil
+  desc: Detects archive creation which often precedes exfiltration
+  condition: >
+    spawned_process and
+    proc.name in (tar, zip, gzip, 7z, rar) and
+    (proc.cmdline contains "/etc" or
+     proc.cmdline contains "/home" or
+     proc.cmdline contains "/root" or
+     proc.cmdline contains "passwd" or
+     proc.cmdline contains ".ssh")
+  output: "Sensitive data archiving detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [exfiltration, archive, mitre_exfiltration, T1560]
+
+- rule: DNS Exfiltration Attempt
+  desc: Detects potential DNS tunneling/exfiltration
+  condition: >
+    spawned_process and
+    proc.name in (dig, nslookup, host) and
+    (proc.cmdline contains "TXT" or proc.cmdline contains "txt")
+  output: "Potential DNS exfiltration user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [exfiltration, dns, mitre_exfiltration, T1048.003]
+
+# ---------------------------------------------
+# Impact Detection (T1485, T1486, T1489)
+# ---------------------------------------------
+
+- rule: File Deletion in Bulk
+  desc: Detects mass file deletion (potential ransomware or destruction)
+  condition: >
+    spawned_process and
+    proc.name = "rm" and
+    (proc.cmdline contains "-rf" or proc.cmdline contains "-r") and
+    (proc.cmdline contains "/home" or
+     proc.cmdline contains "/var" or
+     proc.cmdline contains "/etc" or
+     proc.cmdline contains "/*")
+  output: "Mass file deletion detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [impact, destruction, mitre_impact, T1485]
+
+- rule: Service Stop Command
+  desc: Detects stopping of critical services
+  condition: >
+    spawned_process and
+    (proc.name = "systemctl" or proc.name = "service") and
+    (proc.cmdline contains "stop" or proc.cmdline contains "disable")
+  output: "Service stopped user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [impact, service_stop, mitre_impact, T1489]
+
+- rule: Disk Wipe Attempt
+  desc: Detects attempts to wipe disk or overwrite files
+  condition: >
+    spawned_process and
+    (proc.name = "dd" and
+     (proc.cmdline contains "if=/dev/zero" or proc.cmdline contains "if=/dev/urandom") and
+     (proc.cmdline contains "/dev/sd" or proc.cmdline contains "/dev/nvme"))
+  output: "Disk wipe attempt detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [impact, disk_wipe, mitre_impact, T1561]
+
+# ---------------------------------------------
+# Defense Evasion (T1070, T1036, T1027)
+# ---------------------------------------------
+
+- rule: Log File Tampering
+  desc: Detects attempts to clear or modify system logs
+  condition: >
+    spawned_process and
+    ((proc.name in (truncate, shred) and proc.cmdline contains "/var/log") or
+     (proc.name = "rm" and proc.cmdline contains "/var/log") or
+     (proc.name in (echo, cat, tee) and
+      (proc.cmdline contains "> /var/log" or proc.cmdline contains ">/var/log")) or
+     (proc.name = "sed" and proc.cmdline contains "/var/log"))
+  output: "Log tampering detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [defense_evasion, log_tampering, mitre_defense_evasion, T1070.002]
+
+- rule: History File Tampering
+  desc: Detects clearing or disabling command history
+  condition: >
+    spawned_process and
+    ((proc.cmdline contains "HISTFILE=/dev/null") or
+     (proc.cmdline contains "HISTSIZE=0") or
+     (proc.cmdline contains "unset HISTFILE") or
+     (proc.name = "rm" and proc.cmdline contains ".bash_history") or
+     (proc.name = "rm" and proc.cmdline contains ".zsh_history") or
+     (proc.name in (truncate, shred) and
+      (proc.cmdline contains ".bash_history" or proc.cmdline contains ".zsh_history")))
+  output: "History tampering detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [defense_evasion, history_tampering, mitre_defense_evasion, T1070.003]
+
+- rule: Timestomping Attempt
+  desc: Detects modification of file timestamps to evade detection
+  condition: >
+    spawned_process and
+    proc.name = "touch" and
+    (proc.cmdline contains " -t " or
+     proc.cmdline contains " -d " or
+     proc.cmdline contains " --date" or
+     proc.cmdline contains " -r ")
+  output: "Timestomping detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [defense_evasion, timestomping, mitre_defense_evasion, T1070.006]
+
+- rule: Process Masquerading
+  desc: Detects processes running from suspicious locations with common names
+  condition: >
+    spawned_process and
+    proc.name in (bash, sh, python, python3, perl, ruby, java) and
+    (proc.exepath contains "/tmp" or
+     proc.exepath contains "/dev/shm" or
+     proc.exepath contains "/var/tmp" or
+     proc.exepath contains "/run")
+  output: "Process masquerading detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [defense_evasion, masquerading, mitre_defense_evasion, T1036]
+
+- rule: Kernel Module Loading
+  desc: Detects loading of kernel modules (potential rootkit)
+  condition: >
+    spawned_process and
+    proc.name in (insmod, modprobe, rmmod)
+  output: "Kernel module operation detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [defense_evasion, rootkit, mitre_defense_evasion, T1014]
+
+- rule: Security Tool Disabled
+  desc: Detects attempts to disable security tools
+  condition: >
+    spawned_process and
+    ((proc.name = "systemctl" and
+      (proc.cmdline contains "stop" or proc.cmdline contains "disable") and
+      (proc.cmdline contains "apparmor" or
+       proc.cmdline contains "selinux" or
+       proc.cmdline contains "auditd" or
+       proc.cmdline contains "falco" or
+       proc.cmdline contains "ossec" or
+       proc.cmdline contains "wazuh" or
+       proc.cmdline contains "crowdsec" or
+       proc.cmdline contains "firewalld" or
+       proc.cmdline contains "ufw")) or
+     (proc.name = "setenforce" and proc.cmdline contains "0") or
+     (proc.name = "aa-disable"))
+  output: "Security tool disabled user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [defense_evasion, disable_security, mitre_defense_evasion, T1562.001]
+
+# ---------------------------------------------
+# Privilege Escalation (T1548, T1068, T1611)
+# ---------------------------------------------
+
+- rule: SUID Binary Created
+  desc: Detects creation of SUID/SGID binaries
+  condition: >
+    spawned_process and
+    proc.name = "chmod" and
+    (proc.cmdline contains "+s" or
+     proc.cmdline contains "u+s" or
+     proc.cmdline contains "4755" or
+     proc.cmdline contains "4777" or
+     proc.cmdline contains "2755" or
+     proc.cmdline contains "6755")
+  output: "SUID/SGID binary creation detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [privilege_escalation, suid, mitre_privilege_escalation, T1548.001]
+
+- rule: Capability Manipulation
+  desc: Detects manipulation of Linux capabilities
+  condition: >
+    spawned_process and
+    proc.name in (setcap, getcap, capsh)
+  output: "Capability manipulation detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [privilege_escalation, capabilities, mitre_privilege_escalation, T1548]
+
+- rule: Sudoers File Modified
+  desc: Detects modifications to sudoers configuration
+  condition: >
+    spawned_process and
+    ((proc.name = "visudo") or
+     (proc.name in (vim, vi, nano, sed, tee, echo, cat) and
+      (proc.cmdline contains "/etc/sudoers" or proc.cmdline contains "/etc/sudoers.d")))
+  output: "Sudoers modification detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [privilege_escalation, sudo, mitre_privilege_escalation, T1548.003]
+
+- rule: Password File Modified
+  desc: Detects direct modification of password files
+  condition: >
+    spawned_process and
+    proc.name in (vim, vi, nano, sed, tee, echo) and
+    (proc.cmdline contains "/etc/passwd" or
+     proc.cmdline contains "/etc/shadow" or
+     proc.cmdline contains "/etc/group")
+  output: "Password file modification detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [privilege_escalation, password_files, mitre_privilege_escalation, T1098]
+
+- rule: User Added to Privileged Group
+  desc: Detects adding users to privileged groups
+  condition: >
+    spawned_process and
+    (proc.name = "usermod" or proc.name = "gpasswd") and
+    (proc.cmdline contains "wheel" or
+     proc.cmdline contains "sudo" or
+     proc.cmdline contains "root" or
+     proc.cmdline contains "admin" or
+     proc.cmdline contains "docker")
+  output: "User added to privileged group user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [privilege_escalation, group_modification, mitre_privilege_escalation, T1098]
+
+- rule: Ptrace Injection
+  desc: Detects potential process injection via ptrace
+  condition: >
+    spawned_process and
+    (proc.name in (strace, ltrace, gdb, ptrace) or
+     (proc.cmdline contains "ptrace" and proc.cmdline contains "attach"))
+  output: "Ptrace injection detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [privilege_escalation, injection, mitre_privilege_escalation, T1055.008]
+
+# ---------------------------------------------
+# Container Escape & Abuse (T1611, T1610)
+# ---------------------------------------------
+
+- rule: Nsenter Container Escape
+  desc: Detects nsenter which can be used for container escape
+  condition: >
+    spawned_process and
+    proc.name = "nsenter" and
+    (proc.cmdline contains "-t 1" or proc.cmdline contains "--target 1" or
+     proc.cmdline contains "/proc/1")
+  output: "Container escape via nsenter detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [container_escape, nsenter, mitre_privilege_escalation, T1611]
+
+- rule: Docker Socket Access
+  desc: Detects access to Docker socket from within container
+  condition: >
+    spawned_process and
+    container and
+    (proc.cmdline contains "/var/run/docker.sock" or
+     proc.cmdline contains "docker.sock" or
+     proc.name = "docker")
+  output: "Docker socket access from container user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [container_escape, docker_socket, mitre_privilege_escalation, T1611]
+
+- rule: Host Filesystem Mount
+  desc: Detects attempts to mount host filesystem
+  condition: >
+    spawned_process and
+    proc.name = "mount" and
+    (proc.cmdline contains "/host" or
+     proc.cmdline contains ":/")
+  output: "Host filesystem mount detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [container_escape, mount, mitre_privilege_escalation, T1611]
+
+- rule: Container Runtime in Container
+  desc: Detects running container runtimes inside a container
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (docker, podman, containerd, runc, ctr, crictl)
+  output: "Container runtime detected in container user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [container_escape, runtime, mitre_execution, T1610]
+
+- rule: eBPF Program Load
+  desc: Detects loading eBPF programs (potential for kernel-level attacks)
+  condition: >
+    spawned_process and
+    (proc.name = "bpftool" or
+     proc.cmdline contains "bpf(" or
+     proc.cmdline contains "BPF_PROG_LOAD")
+  output: "eBPF program loading detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [container_escape, ebpf, mitre_execution, T1611]
+
+# ---------------------------------------------
+# Reconnaissance & Enumeration (T1592, T1590)
+# ---------------------------------------------
+
+- rule: Cloud Metadata Access
+  desc: Detects access to cloud instance metadata services
+  condition: >
+    spawned_process and
+    (proc.cmdline contains "169.254.169.254" or
+     proc.cmdline contains "metadata.google" or
+     proc.cmdline contains "metadata.azure")
+  output: "Cloud metadata access detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [reconnaissance, cloud_metadata, mitre_discovery, T1552.005]
+
+- rule: Kubernetes Service Account Access
+  desc: Detects access to Kubernetes service account tokens
+  condition: >
+    spawned_process and
+    (proc.cmdline contains "/var/run/secrets/kubernetes.io" or
+     proc.cmdline contains "/run/secrets/kubernetes.io")
+  output: "K8s service account access detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [credential_access, kubernetes, mitre_credential_access, T1528]
+
+- rule: Environment Variable Enumeration
+  desc: Detects enumeration of environment variables (often contain secrets)
+  condition: >
+    spawned_process and
+    (proc.name = "env" or
+     proc.name = "printenv" or
+     (proc.name = "cat" and proc.cmdline contains "/proc/" and proc.cmdline contains "/environ"))
+  output: "Environment enumeration detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [reconnaissance, env_enum, mitre_discovery, T1082]
+
+# ---------------------------------------------
+# Webshell & Backdoor Detection (T1505.003)
+# ---------------------------------------------
+
+- rule: Webshell Indicators
+  desc: Detects common webshell behavior patterns
+  condition: >
+    spawned_process and
+    proc.pname in (apache2, httpd, nginx, php-fpm, php, node, java, python, python3) and
+    proc.name in (sh, bash, dash, zsh, ksh, csh, ash, cmd, powershell)
+  output: "Potential webshell activity detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [persistence, webshell, mitre_persistence, T1505.003]
+
+- rule: Netcat Listener
+  desc: Detects netcat in listen mode (potential backdoor)
+  condition: >
+    spawned_process and
+    proc.name in (nc, netcat, ncat) and
+    (proc.cmdline contains "-l" or proc.cmdline contains "--listen")
+  output: "Netcat listener detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [persistence, backdoor, mitre_persistence, T1505]
+
+- rule: Socat Tunnel
+  desc: Detects socat which can be used for tunneling and backdoors
+  condition: >
+    spawned_process and
+    proc.name = "socat" and
+    (proc.cmdline contains "TCP-LISTEN" or
+     proc.cmdline contains "EXEC" or
+     proc.cmdline contains "PTY")
+  output: "Socat tunnel detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [persistence, backdoor, mitre_command_and_control, T1572]
+
+# ---------------------------------------------
+# Suspicious Binary Execution
+# ---------------------------------------------
+
+- rule: Binary Executed from Dev SHM
+  desc: Detects execution of binaries from /dev/shm (memory-only filesystem)
+  condition: >
+    spawned_process and
+    proc.exepath startswith "/dev/shm"
+  output: "Binary executed from /dev/shm user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [execution, dev_shm, mitre_defense_evasion, T1027]
+
+- rule: Binary Executed from Proc
+  desc: Detects execution from /proc filesystem (fileless malware)
+  condition: >
+    spawned_process and
+    proc.exepath startswith "/proc/" and
+    proc.exepath contains "/fd/"
+  output: "Binary executed from /proc user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [execution, fileless, mitre_defense_evasion, T1620]
+
+- rule: Memfd Create Execution
+  desc: Detects execution via memfd_create (fileless execution)
+  condition: >
+    spawned_process and
+    (proc.exepath contains "memfd:" or proc.exepath contains "(deleted)")
+  output: "Fileless execution detected via memfd user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: CRITICAL
+  tags: [execution, fileless, mitre_defense_evasion, T1620]
+
+# ---------------------------------------------
+# Network Anomalies
+# ---------------------------------------------
+
+- rule: DNS Over HTTPS Attempt
+  desc: Detects potential DNS over HTTPS usage to bypass monitoring
+  condition: >
+    spawned_process and
+    (proc.cmdline contains "dns.google" or
+     proc.cmdline contains "cloudflare-dns.com" or
+     proc.cmdline contains "1.1.1.1/dns-query" or
+     proc.cmdline contains "8.8.8.8/dns-query")
+  output: "DNS over HTTPS detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [command_and_control, doh, mitre_command_and_control, T1071.004]
+
+- rule: Tor Connection Attempt
+  desc: Detects attempts to connect to Tor network
+  condition: >
+    spawned_process and
+    (proc.name = "tor" or
+     proc.cmdline contains ".onion" or
+     proc.cmdline contains "torproject.org" or
+     proc.cmdline contains "9050" or proc.cmdline contains "9051")
+  output: "Tor connection attempt detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [command_and_control, tor, mitre_command_and_control, T1090.003]
+
+- rule: Proxy Tool Usage
+  desc: Detects usage of proxy tools that can tunnel traffic
+  condition: >
+    spawned_process and
+    proc.name in (proxychains, tsocks, redsocks, chisel, ligolo, frp, ngrok)
+  output: "Proxy tool usage detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [command_and_control, proxy, mitre_command_and_control, T1090]
+
+# ---------------------------------------------
+# Data Staging & Collection (T1074, T1119)
+# ---------------------------------------------
+
+- rule: Data Staged in Tmp
+  desc: Detects suspicious data staging in tmp directories
+  condition: >
+    spawned_process and
+    proc.name in (cp, mv, tar, zip) and
+    (proc.cmdline contains "/tmp/" or proc.cmdline contains "/var/tmp/") and
+    (proc.cmdline contains "/etc" or
+     proc.cmdline contains "/home" or
+     proc.cmdline contains "/root" or
+     proc.cmdline contains ".ssh" or
+     proc.cmdline contains "passwd" or
+     proc.cmdline contains "shadow")
+  output: "Data staging detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [collection, data_staging, mitre_collection, T1074.001]
+
+- rule: Database Dump
+  desc: Detects database dump operations
+  condition: >
+    spawned_process and
+    proc.name in (mysqldump, pg_dump, mongodump, redis-cli, sqlite3) and
+    not proc.cmdline contains "backup"
+  output: "Database dump detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: WARNING
+  tags: [collection, database_dump, mitre_collection, T1005]
+
+- rule: Screenshot or Screen Capture
+  desc: Detects screen capture utilities
+  condition: >
+    spawned_process and
+    proc.name in (scrot, import, gnome-screenshot, xwd, xclip)
+  output: "Screen capture detected user=%user.name command=%proc.cmdline file=%fd.name"
+  priority: NOTICE
+  tags: [collection, screen_capture, mitre_collection, T1113]

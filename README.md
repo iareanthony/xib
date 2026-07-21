@@ -82,19 +82,20 @@ docker compose --profile pki --profile identity up -d
 
 ### SIB runtime detection
 
-Docker SIB is maintained in the pinned
-[`iareanthony/sib`](https://github.com/iareanthony/sib) fork and runs as a
-separate privileged Falco stack:
+Docker SIB is vendored from the pinned
+[`iareanthony/sib`](https://github.com/iareanthony/sib) fork and is part of the
+main Compose application. A normal deployment from `.env.example` starts it:
 
 ```bash
-make sib-install
-make sib-health
+cp .env.example .env
+docker compose up -d
 ```
 
 SIB dashboards and datasources are provisioned into the existing XIB Grafana
 at `http://localhost:3000`; no second Grafana is deployed. VictoriaLogs uses
-port `9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. Use
-`make sib-stop`, `make sib-start`, and `make sib-logs` for lifecycle operations.
+port `9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. The equivalent
+explicit command is `docker compose --profile sib up -d`. Set
+`COMPOSE_PROFILES=` in `.env` to omit SIB.
 SIB requires a Linux host and privileged kernel/eBPF access; Docker Desktop is
 not supported.
 
@@ -103,7 +104,7 @@ not supported.
 ## Configuration
 
 The XIB `.env` file is created from `.env.example` on first `make up`. Docker
-SIB keeps its separate configuration under `.xib-components/sib/.env`.
+SIB uses the same `.env` and main `docker-compose.yml`.
 
 To customise the unified Grafana:
 
