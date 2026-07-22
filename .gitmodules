@@ -9,10 +9,10 @@
 	url = https://github.com/iareanthony/cib.git
 [submodule "iib"]
 	path = iib
-	url = https://github.com/iareanthony/iib.git
+	url = https://github.com/matijazezelj/iib.git
 [submodule "pib"]
 	path = pib
-	url = https://github.com/iareanthony/pib.git
+	url = https://github.com/matijazezelj/pib.git
 [submodule "sib"]
 	path = sib
 	url = https://github.com/iareanthony/sib.git
