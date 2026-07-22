@@ -108,7 +108,7 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./k8s/dashboards:/etc/grafana/dashboards:ro
-      - ./vendor/sib/grafana/provisioning/dashboards/victorialogs:/etc/grafana/sib-dashboards:ro
+      - ./sib/grafana/provisioning/dashboards/victorialogs:/etc/grafana/sib-dashboards:ro
     depends_on:
       victoriametrics:
         condition: service_healthy
@@ -146,7 +146,7 @@ services:
       - -promscrape.config=/etc/prometheus/prometheus.yml
     volumes:
       - sib-victoriametrics-data:/vmstorage
-      - ./vendor/sib/storage/config/prometheus-vm.yml:/etc/prometheus/prometheus.yml:ro
+      - ./sib/storage/config/prometheus-vm.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       sib:
         aliases: [sib-victoriametrics]
@@ -182,7 +182,7 @@ services:
     ports: ["${SIB_SIDEKICK_BIND:-127.0.0.1}:${SIB_SIDEKICK_PORT:-2801}:2801"]
     command: [-c, /etc/falcosidekick/config.yaml]
     volumes:
-      - ./sib/config/falcosidekick.yaml:/etc/falcosidekick/config.yaml:ro
+      - ./config/sib/falcosidekick.yaml:/etc/falcosidekick/config.yaml:ro
     networks: [sib]
     depends_on:
       sib-victorialogs:
@@ -205,8 +205,8 @@ services:
       HOST_ROOT: /host
       FALCOCTL_DRIVER_TYPE: modern_ebpf
     volumes:
-      - ./sib/config/falco.yaml:/etc/falco/falco.yaml:ro
-      - ./vendor/sib/detection/config/rules:/etc/falco/rules:ro
+      - ./config/sib/falco.yaml:/etc/falco/falco.yaml:ro
+      - ./sib/detection/config/rules:/etc/falco/rules:ro
       - /var/run/docker.sock:/host/var/run/docker.sock:ro
       - /dev:/host/dev:ro
       - /proc:/host/proc:ro

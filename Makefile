@@ -1,4 +1,4 @@
-.PHONY: up up-socket down restart logs build clean setup smoke sib-install sib-start sib-stop sib-health sib-logs
+.PHONY: up up-socket down restart logs build clean setup pull-submodules smoke sib-install sib-start sib-stop sib-health sib-logs
 
 up: setup
 	docker compose up -d
@@ -21,11 +21,18 @@ logs:
 	docker compose logs -f
 
 setup:
+	@if [ ! -f sib/detection/config/rules/falco_rules.yaml ]; then \
+		echo "Initializing pinned SIB package..."; \
+		git submodule update --init --recursive sib; \
+	fi
 	@if [ ! -f .env ]; then \
 		echo "Creating .env from .env.example..."; \
 		cp .env.example .env; \
 	fi
 	@echo "XIB Compose environment ready."
+
+pull-submodules:
+	git submodule update --init --recursive
 
 smoke: ## Run local runtime smoke checks against the XIB stack
 	@bash scripts/smoke-test.sh
