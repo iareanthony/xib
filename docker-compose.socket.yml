@@ -2,12 +2,16 @@
 # Set DOCKER_GID to the group owner of /var/run/docker.sock on the host.
 services:
   vib:
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - vib-trivy-cache:/data/trivy-cache
     group_add: ["${DOCKER_GID:?Set DOCKER_GID to the Docker socket group ID}"]
 
   cib:
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - cib-data:/data

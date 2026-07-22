@@ -7,7 +7,56 @@ x-collector: &collector
       condition: service_completed_successfully
   networks: [xib]
 
+x-docker-collector: &docker-collector
+  <<: *collector
+  depends_on:
+    docker-socket-proxy:
+      condition: service_healthy
+    victoriametrics:
+      condition: service_healthy
+    initialize-volumes:
+      condition: service_completed_successfully
+
 services:
+  docker-socket-proxy:
+    container_name: ${XIB_CONTAINER_PREFIX:-xib}-docker-socket-proxy
+    image: tecnativa/docker-socket-proxy@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      IMAGES: "1"
+      INFO: "1"
+      VERSION: "1"
+      PING: "1"
+      POST: "0"
+      DELETE: "0"
+      EXEC: "0"
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      CONFIGS: "0"
+      DISTRIBUTION: "0"
+      EVENTS: "0"
+      GRPC: "0"
+      NETWORKS: "0"
+      NODES: "0"
+      PLUGINS: "0"
+      SECRETS: "0"
+      SERVICES: "0"
+      SESSION: "0"
+      SWARM: "0"
+      SYSTEM: "0"
+      TASKS: "0"
+      VOLUMES: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [xib]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:2375/_ping]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
   initialize-volumes:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-initialize-volumes
     image: grafana/grafana:12.1.0
@@ -38,10 +87,11 @@ services:
 
   vib:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-vib
-    <<: *collector
+    <<: *docker-collector
     image: ghcr.io/iareanthony/xib-vib-scanner@sha256:f17e85c9ccc00194c959522fc75eaab0a5e8ab709065bdec76837199e01af2cd
     volumes: ["vib-trivy-cache:/data/trivy-cache"]
     environment:
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
       VICTORIAMETRICS_URL: http://victoriametrics:8428
       TRIVY_CACHE_DIR: /data/trivy-cache
       SCAN_INTERVAL_HOURS: "${VIB_SCAN_INTERVAL_HOURS:-6}"
@@ -50,10 +100,11 @@ services:
 
   cib:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-cib
-    <<: *collector
+    <<: *docker-collector
     image: ghcr.io/iareanthony/xib-cib-checker@sha256:fb815194eabb0a2048871ad174ee479050b65e6b817c111527ed4fabb58e85f3
     volumes: ["cib-data:/data"]
     environment:
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
       VICTORIAMETRICS_URL: http://victoriametrics:8428
       TRIVY_CACHE_DIR: /data/trivy-cache
       SCAN_INTERVAL_HOURS: "${CIB_SCAN_INTERVAL_HOURS:-6}"
