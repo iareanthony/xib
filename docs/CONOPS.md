@@ -18,7 +18,7 @@ XIB is designed to:
 
 - deploy as a self-contained Docker Compose project without Git submodules;
 - deploy into a dedicated Kubernetes namespace;
-- run without privileged containers or host Docker socket mounts;
+- limit Docker discovery to a restricted, internal-only socket proxy;
 - discover Kubernetes workloads using read-only API access;
 - support connected and disconnected clusters;
 - use persistent local or enterprise-provided Kubernetes storage;
@@ -42,6 +42,7 @@ The default standalone profile contains the following services:
 | TIB | CISA KEV and EPSS correlation against VIB findings | Enabled |
 | IIB | Authentik identity metrics exporter | Disabled |
 | PIB | TLS certificate health monitor | Disabled |
+| Docker socket proxy | Restricted host container and image discovery for VIB/CIB | Enabled |
 | VictoriaMetrics | Shared time-series metrics storage | Enabled |
 | Grafana | Component and unified dashboards | Enabled |
 
@@ -78,8 +79,9 @@ Helm chart. PIB and IIB are optional profiles because they require configured
 TLS endpoints or an existing Authentik service.
 
 Compose uses one VictoriaMetrics service and provisions all six Grafana
-dashboards. VIB and CIB inspect the registry images listed in `XIB_SCAN_IMAGES`;
-they do not require access to the host Docker socket.
+dashboards. VIB and CIB inspect both the registry images listed in
+`XIB_SCAN_IMAGES` and host containers discovered through the restricted socket
+proxy. The collectors do not receive the host Docker socket directly.
 
 ### 4.2 Kubernetes standalone
 
@@ -260,26 +262,30 @@ docker compose --profile pki --profile identity up -d
 - `AUTHENTIK_URL` and `AUTHENTIK_TOKEN` connect IIB to an existing Authentik.
 
 Use `docker compose logs -f vib cib tib grafana` for troubleshooting. VIB and
-CIB scan the images in `XIB_SCAN_IMAGES`; the host Docker socket is not mounted.
+CIB combine `XIB_SCAN_IMAGES` with images discovered on the Docker host.
 
-#### Optional Docker socket discovery
+#### Docker socket discovery
 
-On a trusted Linux Docker host, enable dynamic discovery of local containers
-and images with the opt-in overlay:
+The default deployment mounts the host socket only into an internal Docker
+socket proxy. The proxy publishes no host port and permits only the container,
+image, info, version, and ping read APIs. VIB and CIB connect to that proxy over
+the private Compose network.
+
+For troubleshooting on a trusted Linux Docker host, enable the direct-socket
+bypass with the opt-in overlay:
 
 ```bash
 echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" >> .env
 make up-socket
 ```
 
-The overlay mounts `/var/run/docker.sock` into VIB and CIB and adds its numeric
-group owner to the non-root collector processes. `XIB_SCAN_IMAGES` is combined
-with dynamically discovered images.
+The bypass mounts `/var/run/docker.sock` into VIB and CIB, points their Docker
+clients at it, and adds its numeric group owner to the non-root collector
+processes.
 
 Treat Docker socket access as host-root-equivalent. A read-only bind mount does
-not make Docker API operations read-only. Do not enable the overlay on a shared
-or untrusted host, and do not expose the Docker API over an unauthenticated TCP
-listener. Validate the merged definition before use:
+not make Docker API operations read-only. Do not enable the bypass on a shared
+or untrusted host. Validate the merged definition before use:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.socket.yml config --quiet
