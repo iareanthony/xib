@@ -13,3 +13,6 @@
 [submodule "pib"]
 	path = pib
 	url = git@github.com:iareanthony/pib.git
+[submodule "sib"]
+	path = sib
+	url = https://github.com/iareanthony/sib.git

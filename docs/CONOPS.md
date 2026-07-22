@@ -466,7 +466,7 @@ docker compose logs -f sib-falco sib-sidekick
 The main `docker-compose.yml` deploys Falco, Falcosidekick, VictoriaLogs,
 VictoriaMetrics, and node-exporter. It does not deploy a second Grafana. The
 existing XIB Grafana joins the SIB network, installs the VictoriaLogs datasource
-plugin, and provisions the vendored SIB datasources and dashboards into the
+plugin, and provisions the pinned SIB package's datasources and dashboards into the
 **SIB Runtime Security** folder at port `3000`. SIB endpoints use VictoriaLogs
 `9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. Operators can set
 `COMPOSE_PROFILES=` to omit SIB or invoke it explicitly with

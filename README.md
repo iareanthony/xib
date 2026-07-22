@@ -14,12 +14,12 @@ For the operating model and complete deployment lifecycle, see the
 make up
 ```
 
-That starts VIB, CIB, TIB, VictoriaMetrics, and the unified Grafana. The PIB
-and IIB monitors are optional profiles because they require TLS targets or an
-existing Authentik deployment.
+That starts VIB, CIB, TIB, SIB runtime detection, VictoriaMetrics, and the
+unified Grafana. The PIB and IIB monitors are optional profiles because they
+require TLS targets or an existing Authentik deployment.
 
-The Compose deployment is self-contained: it uses the same immutable images
-as Kubernetes and does not require Git submodules.
+The Compose deployment uses the same immutable collector images as Kubernetes.
+SIB is included as a pinned package and initialized automatically by `make up`.
 
 ---
 
@@ -32,7 +32,8 @@ xib/
 ├── cib/   ← Compliance in a Box     (SBOM, license, EOL, container policy)
 ├── iib/   ← Identity in a Box       (Authentik IdP, login metrics)
 ├── pib/   ← PKI in a Box            (step-ca, TLS cert expiry monitor)
-└── ...    ← XIB Grafana (unified dashboard, all 5 datasources)
+├── sib/   ← SIEM in a Box           (Falco runtime detection + VictoriaLogs)
+└── ...    ← XIB Grafana (unified XIB and SIB dashboards)
 ```
 
 The Docker deployment is defined entirely in this repository and connects all collectors to one VictoriaMetrics service and one provisioned Grafana service.
@@ -42,7 +43,7 @@ The Docker deployment is defined entirely in this repository and connects all co
 ## Quick start
 
 ```bash
-git clone https://github.com/iareanthony/xib.git
+git clone --recurse-submodules https://github.com/iareanthony/xib.git
 cd xib
 make up
 ```
@@ -82,9 +83,10 @@ docker compose --profile pki --profile identity up -d
 
 ### SIB runtime detection
 
-Docker SIB is vendored from the pinned
-[`iareanthony/sib`](https://github.com/iareanthony/sib) fork and is part of the
-main Compose application. A normal deployment from `.env.example` starts it:
+Docker SIB is included as the pinned
+[`iareanthony/sib`](https://github.com/iareanthony/sib) package and is part of
+the main Compose application. `make up` initializes the package automatically.
+A normal deployment from `.env.example` starts it:
 
 ```bash
 cp .env.example .env
