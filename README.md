@@ -58,7 +58,7 @@ For a disconnected cluster, prepare the image archive on a connected staging
 machine with `airgap/export-images.ps1`, transfer the resulting bundle, mirror
 or load the images, and install with `airgap/install.ps1`.
 
-Open **http://localhost:3000** — the XIB Security Overview dashboard loads automatically.
+Open **http://localhost:4000** — the XIB Security Overview dashboard loads automatically.
 
 ### Optional Docker socket discovery
 
@@ -94,7 +94,7 @@ docker compose up -d
 ```
 
 SIB dashboards and datasources are provisioned into the existing XIB Grafana
-at `http://localhost:3000`; no second Grafana is deployed. VictoriaLogs uses
+at `http://localhost:4000`; no second Grafana is deployed. VictoriaLogs uses
 port `9428`, VictoriaMetrics `8429`, and Falcosidekick `2801`. The equivalent
 explicit command is `docker compose --profile sib up -d`. Set
 `COMPOSE_PROFILES=` in `.env` to omit SIB.

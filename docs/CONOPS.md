@@ -246,7 +246,7 @@ make smoke
 docker compose ps
 ```
 
-Grafana is available at `http://localhost:3000` by default. The one-shot
+Grafana is available at `http://localhost:4000` by default. The one-shot
 `initialize-volumes` container must exit with status zero; this is normal and
 prepares non-root collector volume ownership.
 

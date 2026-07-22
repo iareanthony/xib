@@ -23,7 +23,7 @@ logs:
 setup:
 	@if [ ! -f sib/detection/config/rules/falco_rules.yaml ]; then \
 		echo "Initializing pinned SIB package..."; \
-		git submodule update --init --recursive sib; \
+		git submodule update --init --recursive --force sib; \
 	fi
 	@if [ ! -f .env ]; then \
 		echo "Creating .env from .env.example..."; \
