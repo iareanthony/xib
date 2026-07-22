@@ -1,18 +1,18 @@
 [submodule "vib"]
 	path = vib
-	url = git@github.com:iareanthony/vib.git
+	url = https://github.com/iareanthony/vib.git
 [submodule "tib"]
 	path = tib
-	url = git@github.com:iareanthony/tib.git
+	url = https://github.com/iareanthony/tib.git
 [submodule "cib"]
 	path = cib
-	url = git@github.com:iareanthony/cib.git
+	url = https://github.com/iareanthony/cib.git
 [submodule "iib"]
 	path = iib
-	url = git@github.com:iareanthony/iib.git
+	url = https://github.com/iareanthony/iib.git
 [submodule "pib"]
 	path = pib
-	url = git@github.com:iareanthony/pib.git
+	url = https://github.com/iareanthony/pib.git
 [submodule "sib"]
 	path = sib
 	url = https://github.com/iareanthony/sib.git
