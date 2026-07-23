@@ -7,8 +7,20 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- end }}
 {{- define "xib.image" -}}{{ printf "%s/%s" .Values.xib.imageRegistry .image }}{{- end }}
 
+{{- define "xib.trustedCa.enabled" -}}
+{{- if or .Values.global.trustedCa.existingConfigMap (and .Values.global.trustedCa.autoDiscover (.Files.Get "custom-ca/ca.crt")) -}}true{{- end -}}
+{{- end }}
+
+{{- define "xib.trustedCa.configMapName" -}}
+{{- if .Values.global.trustedCa.existingConfigMap -}}
+{{- .Values.global.trustedCa.existingConfigMap -}}
+{{- else -}}
+{{- printf "%s-environment-ca" (include "xib.fullname" .) -}}
+{{- end -}}
+{{- end }}
+
 {{- define "xib.trustedCa.initContainer" -}}
-{{- if .Values.global.trustedCa.existingConfigMap }}
+{{- if eq (include "xib.trustedCa.enabled" .) "true" }}
 initContainers:
   - name: build-trusted-ca-bundle
     image: {{ .Values.global.trustedCa.bundleImage | quote }}
@@ -30,23 +42,23 @@ initContainers:
 {{- end }}
 
 {{- define "xib.trustedCa.env" -}}
-{{- if .Values.global.trustedCa.existingConfigMap }}
+{{- if eq (include "xib.trustedCa.enabled" .) "true" }}
 - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
 - {name: REQUESTS_CA_BUNDLE, value: /etc/xib/trust/ca-bundle.crt}
 {{- end }}
 {{- end }}
 
 {{- define "xib.trustedCa.volumeMount" -}}
-{{- if .Values.global.trustedCa.existingConfigMap }}
+{{- if eq (include "xib.trustedCa.enabled" .) "true" }}
 - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
 {{- end }}
 {{- end }}
 
 {{- define "xib.trustedCa.volumes" -}}
-{{- if .Values.global.trustedCa.existingConfigMap }}
+{{- if eq (include "xib.trustedCa.enabled" .) "true" }}
 - name: xib-custom-ca
   configMap:
-    name: {{ .Values.global.trustedCa.existingConfigMap }}
+    name: {{ include "xib.trustedCa.configMapName" . }}
     items:
       - {key: {{ .Values.global.trustedCa.key }}, path: ca.crt}
 - {name: xib-trust, emptyDir: {}}

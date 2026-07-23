@@ -67,20 +67,23 @@ helm upgrade --install xib ./k8s -n xib-system --create-namespace \
 ### Environment root CAs
 
 For a Kubernetes environment with TLS interception or private certificate
-authorities, create a ConfigMap from one or more PEM root certificates and
-reference it during installation:
+authorities, copy the environment's PEM root CA bundle into the chart before
+installing:
 
 ```bash
-kubectl create namespace xib-system --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl -n xib-system create configmap xib-environment-ca \
-  --from-file=ca.crt=/path/to/environment-root-cas.pem
-
-helm upgrade --install xib ./k8s -n xib-system --create-namespace \
-  --set-string global.trustedCa.existingConfigMap=xib-environment-ca
+cp /path/to/environment-root-cas.pem k8s/custom-ca/ca.crt
+helm upgrade --install xib ./k8s -n xib-system --create-namespace
 ```
 
-XIB appends those certificates to the public CA bundle and provides the
+Helm detects the file, creates the ConfigMap, and enables the combined trust
+bundle automatically. The certificate is ignored by Git. For GitOps or a
+centrally managed CA ConfigMap, leave the directory empty and set:
+
+```bash
+--set-string global.trustedCa.existingConfigMap=<configmap-name>
+```
+
+XIB appends the supplied certificates to the public CA bundle and provides the
 combined bundle to its HTTPS clients. For Docker Compose on Linux:
 
 ```bash
