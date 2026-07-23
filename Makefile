@@ -1,7 +1,18 @@
-.PHONY: up up-socket down restart logs build clean setup pull-submodules smoke sib-install sib-start sib-stop sib-health sib-logs
+.PHONY: up up-ca up-socket down restart logs build clean setup pull-submodules smoke sib-install sib-start sib-stop sib-health sib-logs
 
 up: setup
 	docker compose up -d
+
+up-ca: setup
+	@root_ca="$(XIB_ROOT_CA)"; \
+		if [ -z "$$root_ca" ] && [ -f .env ]; then \
+			root_ca="$$(sed -n 's/^XIB_ROOT_CA=//p' .env | tail -n 1)"; \
+		fi; \
+		test -n "$$root_ca" || \
+			(echo "Set XIB_ROOT_CA to a PEM file containing the environment root CA(s)."; exit 1); \
+		bash scripts/prepare-ca-bundle.sh "$$root_ca" ".xib/trust/ca-bundle.crt"
+	XIB_CA_BUNDLE="$(CURDIR)/.xib/trust/ca-bundle.crt" \
+		docker compose -f docker-compose.yml -f docker-compose.ca.yml up -d
 
 up-socket: setup
 	@test -n "$(DOCKER_GID)" || grep -qE '^DOCKER_GID=[0-9]+$$' .env || \
