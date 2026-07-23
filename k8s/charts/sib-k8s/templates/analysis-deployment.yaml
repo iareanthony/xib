@@ -1,0 +1,124 @@
+{{/*
+Analysis Service Deployment
+*/}}
+{{- if .Values.analysis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sib-k8s.analysis.fullname" . }}
+  labels:
+    {{- include "sib-k8s.analysis.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.analysis.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sib-k8s.analysis.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sib-k8s.analysis.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/analysis-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "sib-k8s.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "sib-k8s.analysis.fullname" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: analysis
+          image: "{{ .Values.analysis.image.repository }}:{{ .Values.analysis.image.tag }}"
+          imagePullPolicy: {{ .Values.analysis.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.analysis.service.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "sib-k8s.analysis.fullname" . }}-config
+          env:
+            - name: ANALYZER_LOKI_URL
+              value: {{ include "sib-k8s.loki.url" . | quote }}
+            - name: ANALYZER_LLM_PROVIDER
+              value: {{ .Values.analysis.llm.provider | quote }}
+            {{- if eq .Values.analysis.llm.provider "ollama" }}
+            - name: ANALYZER_OLLAMA_URL
+              value: {{ .Values.analysis.llm.ollama.url | quote }}
+            - name: ANALYZER_LLM_MODEL
+              value: {{ .Values.analysis.llm.ollama.model | quote }}
+            {{- end }}
+            {{- if eq .Values.analysis.llm.provider "openai" }}
+            - name: ANALYZER_LLM_MODEL
+              value: {{ .Values.analysis.llm.openai.model | quote }}
+            - name: ANALYZER_LLM_MAX_TOKENS
+              value: {{ .Values.analysis.llm.openai.maxTokens | quote }}
+            {{- end }}
+            {{- if eq .Values.analysis.llm.provider "anthropic" }}
+            - name: ANALYZER_LLM_MODEL
+              value: {{ .Values.analysis.llm.anthropic.model | quote }}
+            - name: ANALYZER_LLM_MAX_TOKENS
+              value: {{ .Values.analysis.llm.anthropic.maxTokens | quote }}
+            {{- end }}
+            {{- /* OpenAI API Key - from values or existing secret */}}
+            {{- if .Values.analysis.llm.openai.apiKey }}
+            - name: ANALYZER_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sib-k8s.analysis.fullname" . }}-api-keys
+                  key: openai-api-key
+            {{- else if .Values.analysis.llm.openai.existingSecret }}
+            - name: ANALYZER_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.analysis.llm.openai.existingSecret }}
+                  key: {{ .Values.analysis.llm.openai.secretKey | default "api-key" }}
+            {{- end }}
+            {{- /* Anthropic API Key - from values or existing secret */}}
+            {{- if .Values.analysis.llm.anthropic.apiKey }}
+            - name: ANALYZER_ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sib-k8s.analysis.fullname" . }}-api-keys
+                  key: anthropic-api-key
+            {{- else if .Values.analysis.llm.anthropic.existingSecret }}
+            - name: ANALYZER_ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.analysis.llm.anthropic.existingSecret }}
+                  key: {{ .Values.analysis.llm.anthropic.secretKey | default "api-key" }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.analysis.resources | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: /app/cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

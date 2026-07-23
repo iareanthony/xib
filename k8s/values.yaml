@@ -1,8 +1,12 @@
 global:
-  imageRegistry: ghcr.io/iareanthony
   imagePullPolicy: IfNotPresent
   imagePullSecrets: []
   storageClass: ""
+
+xib:
+  # Kept outside Helm's reserved global scope so this prefix is not inherited
+  # by the vendored SIB dependency charts.
+  imageRegistry: ghcr.io/iareanthony
 
 platform:
   metrics:
@@ -80,8 +84,34 @@ pib:
   intervalHours: "6"
 
 sib:
-  # SIB remains its own Helm release. This flag creates a discoverable marker and
-  # keeps XIB installable without reaching an external Helm repository.
-  enabled: false
-  releaseName: sib-k8s
-  namespace: sib-k8s
+  # SIB-K8s is vendored into this chart and installed as part of the XIB release.
+  enabled: true
+  global:
+    namespace: xib-system
+  auditPlugin:
+    type: k8saudit
+    k8saudit:
+      enabled: true
+      serviceType: ClusterIP
+  syscallMonitoring:
+    enabled: true
+    driverKind: modern_ebpf
+  analysis:
+    # Requires a separately configured LLM endpoint and is not part of the
+    # default test-cluster footprint.
+    enabled: false
+  falco:
+    falco:
+      http_output:
+        url: "http://xib-falcosidekick:2801"
+  falcosidekick:
+    fullnameOverride: xib-falcosidekick
+    config:
+      loki:
+        hostport: "http://xib-loki:3100"
+  loki:
+    enabled: true
+    fullnameOverride: xib-loki
+  grafana:
+    # XIB's Grafana loads the SIB dashboards and Loki datasource.
+    enabled: false

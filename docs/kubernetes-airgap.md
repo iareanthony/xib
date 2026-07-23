@@ -6,8 +6,8 @@ layout.
 
 ## Profiles
 
-- Default: deploy one VictoriaMetrics service and one Grafana instance with
-  AIB, VIB, CIB, and TIB.
+- Default: deploy VictoriaMetrics and XIB Grafana with AIB, VIB, CIB, TIB, and
+  the vendored SIB-K8s runtime stack.
 - `values-existing-platform.yaml`: reuse an existing Prometheus Operator and
   Grafana deployment. IIB is enabled and exposed through a `ServiceMonitor`.
 - `values-airgap.yaml`: rewrite application image locations to an internal
@@ -55,8 +55,9 @@ images into the cluster's internal registry:
    possible in a fully disconnected cluster.
 4. Pin all application images in `airgap/images.txt` to published immutable
    tags or digests before producing a release.
-5. Install `sib-k8s` from its vendored chart as a second release when runtime
-   and Kubernetes audit monitoring is required.
+5. SIB-K8s is part of the XIB release by default. Mirror its Falco,
+   Falcosidekick, Loki, and Grafana images along with the XIB application
+   images.
 
 ## Secrets
 

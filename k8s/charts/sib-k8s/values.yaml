@@ -1,0 +1,563 @@
+# SIB-K8s Values Configuration
+# ============================
+# Comprehensive Kubernetes Security Monitoring with Multi-Cloud K8s Audit Support
+
+# Global settings
+global:
+  # -- Namespace to deploy all components
+  namespace: sib-k8s
+
+  # -- Common labels applied to all resources
+  labels: {}
+
+  # -- Image pull secrets for private registries
+  imagePullSecrets: []
+
+# =============================================================================
+# K8s Audit Plugin Configuration
+# =============================================================================
+# Choose ONE of the following audit sources:
+# - k8saudit: Generic Kubernetes audit logs (webhook)
+# - k8saudit-eks: AWS EKS audit logs from CloudWatch
+# - k8saudit-gke: Google GKE audit logs from Cloud Logging
+# - k8saudit-aks: Azure AKS audit logs from Azure Monitor
+
+auditPlugin:
+  # -- Which k8saudit plugin to use: k8saudit, k8saudit-eks, k8saudit-gke, k8saudit-aks
+  type: k8saudit
+
+  # -- Plugin version to install
+  version: "0.16"
+
+  # -- Rules version to install
+  rulesVersion: "0.16"
+
+  # =============================================================================
+  # Generic k8saudit configuration (webhook-based)
+  # Use when: You want to receive audit logs via webhook from any K8s cluster
+  # =============================================================================
+  k8saudit:
+    # -- Enable webhook receiver
+    enabled: true
+    # -- Port for webhook receiver
+    port: 9765
+    # -- NodePort for external access (if using NodePort service)
+    nodePort: 30007
+    # -- Service type: ClusterIP, NodePort, LoadBalancer
+    serviceType: NodePort
+    # -- Maximum event size in bytes
+    maxEventBytes: 1048576
+    # -- SSL certificate path (optional)
+    sslCertificate: ""
+    # -- Additional init config as JSON
+    initConfig: ""
+
+  # =============================================================================
+  # AWS EKS Configuration
+  # Use when: Running on AWS EKS and using CloudWatch for audit logs
+  # =============================================================================
+  k8sauditEks:
+    # -- Enable EKS audit log collection
+    enabled: false
+
+    # -- AWS Region
+    region: us-east-1
+
+    # -- CloudWatch Log Group name (usually /aws/eks/<cluster-name>/cluster)
+    logGroup: ""
+
+    # -- CloudWatch Log Stream name (usually kube-apiserver-audit-*)
+    logStream: ""
+
+    # -- Shift in seconds for CloudWatch logs
+    shift: 10
+
+    # -- Polling interval in seconds
+    pollingInterval: 5
+
+    # -- Use EKS Service Account IAM role (recommended)
+    useIRSA: true
+
+    # -- IAM Role ARN for IRSA (leave empty to use node role)
+    iamRoleArn: ""
+
+    # -- AWS credentials (not recommended, use IRSA instead)
+    credentials:
+      accessKeyId: ""
+      secretAccessKey: ""
+      sessionToken: ""
+
+    # -- Profile from ~/.aws/credentials
+    profile: ""
+
+    # -- Maximum event size in bytes
+    maxEventSize: 262144
+
+  # =============================================================================
+  # Google GKE Configuration
+  # Use when: Running on Google GKE
+  # =============================================================================
+  k8sauditGke:
+    # -- Enable GKE audit log collection
+    enabled: false
+
+    # -- GCP Project ID
+    projectId: ""
+
+    # -- GKE Cluster ID
+    clusterId: ""
+
+    # -- GCP Region or Zone
+    location: ""
+
+    # -- Use Workload Identity (recommended)
+    useWorkloadIdentity: true
+
+    # -- Service Account email for Workload Identity
+    serviceAccountEmail: ""
+
+    # -- Path to service account JSON key file (not recommended)
+    credentialsFile: ""
+
+    # -- Polling interval in seconds
+    pollingInterval: 5
+
+  # =============================================================================
+  # Azure AKS Configuration
+  # Use when: Running on Azure AKS
+  # =============================================================================
+  k8sauditAks:
+    # -- Enable AKS audit log collection
+    enabled: false
+
+    # -- Azure Subscription ID
+    subscriptionId: ""
+
+    # -- Azure Resource Group
+    resourceGroup: ""
+
+    # -- AKS Cluster Name
+    clusterName: ""
+
+    # -- Event Hub Namespace
+    eventHubNamespace: ""
+
+    # -- Event Hub Name
+    eventHubName: ""
+
+    # -- Consumer Group
+    consumerGroup: "$Default"
+
+    # -- Use Azure Workload Identity (recommended)
+    useWorkloadIdentity: true
+
+    # -- Azure credentials (not recommended, use Workload Identity)
+    credentials:
+      tenantId: ""
+      clientId: ""
+      clientSecret: ""
+
+    # -- Connection string for Event Hub (alternative to Workload Identity)
+    connectionString: ""
+
+# =============================================================================
+# Syscall Monitoring Configuration
+# =============================================================================
+syscallMonitoring:
+  # -- Enable syscall monitoring in addition to k8s audit
+  enabled: true
+
+  # -- Driver type: auto, kmod, ebpf, modern_ebpf
+  driverKind: modern_ebpf
+
+  # -- Buffer size preset (1-8, higher = more memory but fewer drops)
+  bufSizePreset: 4
+
+  # -- Drop failed syscall exit events
+  dropFailedExit: false
+
+# =============================================================================
+# Analysis Service Configuration (AI-powered alert analysis)
+# =============================================================================
+analysis:
+  # -- Enable AI-powered analysis service
+  enabled: true
+
+  # -- Number of replicas
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/matijazezelj/sib-k8s-analyzer
+    tag: latest
+    pullPolicy: Always
+
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # -- Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # -- Obfuscation configuration
+  obfuscation:
+    # -- Obfuscation level: minimal, standard, paranoid
+    level: standard
+
+  # -- LLM Provider configuration
+  llm:
+    # -- Provider: ollama, openai, anthropic
+    provider: ollama
+
+    # -- Ollama configuration (local, no API key needed)
+    ollama:
+      url: http://ollama:11434
+      model: llama3.1:8b
+      timeout: 120
+
+    # -- OpenAI configuration
+    # To use OpenAI, set provider: openai and provide API key via:
+    # Option 1: Set apiKey directly (not recommended for production)
+    # Option 2: Create secret manually and reference with existingSecret
+    # Example: kubectl create secret generic openai-secret --from-literal=api-key=sk-xxx
+    openai:
+      # -- API key (will be stored in auto-created secret)
+      apiKey: ""
+      # -- Use existing secret instead of apiKey (recommended for production)
+      existingSecret: ""
+      # -- Key name in the secret
+      secretKey: "api-key"
+      # -- Model to use
+      model: gpt-4o-mini
+      # -- Max tokens for response
+      maxTokens: 2000
+
+    # -- Anthropic configuration
+    # To use Anthropic, set provider: anthropic and provide API key via:
+    # Option 1: Set apiKey directly (not recommended for production)
+    # Option 2: Create secret manually and reference with existingSecret
+    # Example: kubectl create secret generic anthropic-secret --from-literal=api-key=sk-ant-xxx
+    anthropic:
+      # -- API key (will be stored in auto-created secret)
+      apiKey: ""
+      # -- Use existing secret instead of apiKey (recommended for production)
+      existingSecret: ""
+      # -- Key name in the secret
+      secretKey: "api-key"
+      # -- Model to use
+      model: claude-sonnet-4-20250514
+      # -- Max tokens for response
+      maxTokens: 2000
+
+  # -- Analysis caching
+  cache:
+    enabled: true
+    ttl: 3600
+    maxSize: 1000
+
+# =============================================================================
+# Falco Configuration
+# =============================================================================
+falco:
+  # -- Enable Falco deployment
+  enabled: true
+
+  # -- Controller type: daemonset for syscall, deployment for plugins only
+  controller:
+    kind: daemonset
+
+  # -- Driver configuration for syscall monitoring
+  driver:
+    enabled: true
+    kind: modern_ebpf
+
+  # -- Collectors for container metadata
+  collectors:
+    enabled: true
+
+  # -- Taint and tolerations for daemonset
+  tty: false
+
+  # -- Disable built-in falcosidekick (we deploy it as separate chart)
+  # We configure http_output manually below
+  falcosidekick:
+    enabled: false
+
+  # -- Custom Falco rules
+  customRules: {}
+
+  # -- Falco configuration overrides
+  falco:
+    # -- HTTP output to Falcosidekick
+    # NOTE: URL assumes release name is "sib-k8s". If using a different
+    # release name, override with: --set falco.falco.http_output.url=http://<release>-falcosidekick:2801
+    http_output:
+      enabled: true
+      url: "http://sib-k8s-falcosidekick:2801"
+      insecure: true
+
+    # -- Rules files to load
+    rules_files:
+      - /etc/falco/falco_rules.yaml
+      - /etc/falco/falco_rules.local.yaml
+      - /etc/falco/k8s_audit_rules.yaml
+      - /etc/falco/rules.d
+
+    # -- Priority level
+    priority: warning
+
+    # -- JSON output
+    json_output: true
+    json_include_output_property: true
+    json_include_tags_property: true
+
+    # -- Metrics
+    metrics:
+      enabled: true
+      interval: 1h
+      outputRule: true
+
+  # -- Falcoctl configuration for artifact management
+  falcoctl:
+    artifact:
+      install:
+        enabled: true
+      follow:
+        enabled: true
+
+# =============================================================================
+# Falcosidekick Configuration
+# =============================================================================
+falcosidekick:
+  # -- Enable Falcosidekick
+  enabled: true
+
+  # -- Number of replicas
+  replicaCount: 1
+
+  # -- Web UI (disabled - using Grafana instead)
+  webui:
+    enabled: false
+
+  # -- Output configuration
+  config:
+    # -- Debug mode
+    debug: false
+
+    # -- Custom fields added to all alerts
+    customfields: ""
+
+    # -- Loki output
+    # NOTE: URLs assume release name is "sib-k8s". If using a different
+    # release name, override with --set flags.
+    loki:
+      hostport: "http://sib-k8s-loki:3100"
+      minimumpriority: ""
+
+    # -- Webhook output (to analysis service)
+    webhook:
+      address: "http://sib-k8s-analysis:8080/webhook"
+      minimumpriority: ""
+
+    # -- Additional outputs (Slack, Teams, PagerDuty, etc.)
+    slack:
+      webhookurl: ""
+      minimumpriority: ""
+
+    teams:
+      webhookurl: ""
+      minimumpriority: ""
+
+    pagerduty:
+      routingkey: ""
+      minimumpriority: ""
+
+    alertmanager:
+      hostport: ""
+      minimumpriority: ""
+
+    elasticsearch:
+      hostport: ""
+      index: "falco"
+      minimumpriority: ""
+
+# =============================================================================
+# Loki Configuration
+# =============================================================================
+loki:
+  # -- Enable Loki deployment
+  enabled: true
+
+  # -- Deployment mode: SingleBinary, SimpleScalable, Distributed
+  deploymentMode: SingleBinary
+
+  # -- Single binary mode config
+  singleBinary:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+
+  # -- Loki configuration
+  loki:
+    auth_enabled: false
+
+    # -- Schema config
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    # -- Storage config
+    storage:
+      type: filesystem
+      filesystem:
+        chunks_directory: /var/loki/chunks
+        rules_directory: /var/loki/rules
+
+    # -- Limits config
+    limits_config:
+      retention_period: 168h  # 7 days
+      max_query_series: 10000
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
+
+    # -- Compactor config for retention
+    compactor:
+      working_directory: /var/loki/retention
+      delete_request_store: filesystem
+      retention_enabled: true
+
+  # -- Gateway configuration
+  gateway:
+    enabled: false
+
+  # -- Backend configuration
+  backend:
+    replicas: 0
+
+  # -- Read replicas
+  read:
+    replicas: 0
+
+  # -- Write replicas
+  write:
+    replicas: 0
+
+  # -- Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+  # -- Chunks cache configuration (memcached)
+  chunksCache:
+    enabled: true
+    allocatedMemory: 2048
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2500Mi
+      limits:
+        memory: 2500Mi
+
+  # -- Results cache configuration (memcached)
+  resultsCache:
+    enabled: true
+    allocatedMemory: 1024
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1500Mi
+      limits:
+        memory: 1500Mi
+
+# =============================================================================
+# Grafana Configuration
+# =============================================================================
+grafana:
+  # -- Enable Grafana deployment
+  enabled: true
+
+  # -- Admin credentials
+  adminUser: admin
+  adminPassword: ""  # Will be auto-generated if empty
+
+  # -- Persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+
+  # -- Datasources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          uid: loki
+          type: loki
+          access: proxy
+          url: http://{{ .Release.Name }}-loki:3100
+          isDefault: true
+          jsonData:
+            maxLines: 1000
+
+  # -- Dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'sib-k8s'
+          orgId: 1
+          folder: 'SIB-K8s'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/sib-k8s
+
+  # -- Dashboard configmaps (created by sib-k8s)
+  dashboardsConfigMaps:
+    sib-k8s: "sib-k8s-dashboards"
+
+  # -- Grafana.ini configuration
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+    security:
+      allow_embedding: true
+    auth.anonymous:
+      enabled: false
+
+# =============================================================================
+# Custom Rules Configuration
+# =============================================================================
+customRules:
+  # -- Enable custom rules ConfigMap
+  enabled: false
+
+  # -- Custom Falco rules
+  rules: |
+    # Add your custom Falco rules here
+    # Example:
+    # - rule: Custom Rule Example
+    #   desc: Description of the rule
+    #   condition: evt.type = open
+    #   output: "Custom alert: %evt.type %proc.name"
+    #   priority: WARNING
+    #   tags: [custom]
