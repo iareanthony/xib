@@ -109,6 +109,48 @@ sib:
     # default test-cluster footprint.
     enabled: false
   falco:
+    mounts:
+      volumes:
+        - name: xib-custom-ca
+          configMap:
+            name: xib-environment-ca
+            items: [{key: ca.crt, path: ca.crt}]
+        - {name: xib-trust, emptyDir: {}}
+      volumeMounts:
+        - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+    extra:
+      env:
+        - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+      initContainers:
+        - name: build-trusted-ca-bundle
+          image: alpine:3.22.1
+          command: [sh, -c]
+          args:
+            - cat /etc/ssl/certs/ca-certificates.crt /xib-custom-ca/ca.crt > /xib-trust/ca-bundle.crt
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: xib-custom-ca, mountPath: /xib-custom-ca, readOnly: true}
+            - {name: xib-trust, mountPath: /xib-trust}
+    falcoctl:
+      artifact:
+        install:
+          env:
+            - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+          mounts:
+            volumeMounts:
+              - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+        follow:
+          env:
+            - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+          mounts:
+            volumeMounts:
+              - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
     falco:
       http_output:
         url: "http://xib-falcosidekick:2801"

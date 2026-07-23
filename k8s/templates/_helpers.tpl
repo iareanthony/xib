@@ -15,7 +15,7 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- if .Values.global.trustedCa.existingConfigMap -}}
 {{- .Values.global.trustedCa.existingConfigMap -}}
 {{- else -}}
-{{- printf "%s-environment-ca" (include "xib.fullname" .) -}}
+{{- print "xib-environment-ca" -}}
 {{- end -}}
 {{- end }}
 
