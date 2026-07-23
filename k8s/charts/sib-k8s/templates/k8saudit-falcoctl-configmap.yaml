@@ -19,7 +19,8 @@ data:
         refs:
           - k8saudit:0.11
           - k8saudit-rules:0.11
-          - json:0.7
+          # Falco 0.40 embeds plugin API 3.10. json 0.7 requires API 3.11.
+          - json:0.6
         resolveDeps: true
     indexes:
       - name: falcosecurity
