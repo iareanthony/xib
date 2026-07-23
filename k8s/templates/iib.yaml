@@ -9,7 +9,8 @@ spec:
     metadata: {labels: {app.kubernetes.io/name: xib-iib, app.kubernetes.io/part-of: xib}}
     spec:
       serviceAccountName: {{ include "xib.fullname" . }}
-      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      {{- include "xib.trustedCa.initContainer" . | nindent 6 }}
       containers:
         - name: iib
           image: {{ include "xib.image" (dict "Values" .Values "image" .Values.iib.image) | quote }}
@@ -17,12 +18,17 @@ spec:
           ports: [{name: metrics, containerPort: 9108}]
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           env:
+            {{- include "xib.trustedCa.env" . | nindent 12 }}
             - {name: AUTHENTIK_URL, value: {{ .Values.iib.authentikUrl | quote }}}
             - {name: INTERVAL_SECONDS, value: {{ .Values.iib.intervalSeconds | quote }}}
             - name: AUTHENTIK_TOKEN
               valueFrom:
-                secretKeyRef: {name: {{ .Values.iib.existingSecret }}, key: {{ .Values.iib.tokenKey }} }
+                  secretKeyRef: {name: {{ .Values.iib.existingSecret }}, key: {{ .Values.iib.tokenKey }} }
+          volumeMounts:
+            {{- include "xib.trustedCa.volumeMount" . | nindent 12 }}
           resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 250m, memory: 256Mi}}
+      volumes:
+        {{- include "xib.trustedCa.volumes" . | nindent 8 }}
 ---
 apiVersion: v1
 kind: Service

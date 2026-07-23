@@ -35,12 +35,14 @@ spec:
         fsGroup: 10001
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: {type: RuntimeDefault}
+      {{- include "xib.trustedCa.initContainer" $root | nindent 6 }}
       containers:
         - name: {{ $name }}
           image: {{ include "xib.image" (dict "Values" $root.Values "image" $cfg.image) | quote }}
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           env:
+            {{- include "xib.trustedCa.env" $root | nindent 12 }}
             - {name: VICTORIAMETRICS_URL, value: {{ include "xib.vmUrl" $root | quote }}}
             - {name: HOME, value: /tmp}
             {{- if eq $name "vib" }}
@@ -67,9 +69,11 @@ spec:
             requests: {cpu: 100m, memory: 128Mi}
             limits: {cpu: "1", memory: 1Gi}
           volumeMounts:
+            {{- include "xib.trustedCa.volumeMount" $root | nindent 12 }}
             - {name: data, mountPath: /data}
             - {name: tmp, mountPath: /tmp}
       volumes:
+        {{- include "xib.trustedCa.volumes" $root | nindent 8 }}
         - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" $root }}-{{ $name }}}}
         - {name: tmp, emptyDir: {}}
 ---
