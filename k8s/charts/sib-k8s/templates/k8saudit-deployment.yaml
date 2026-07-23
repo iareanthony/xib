@@ -26,6 +26,22 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        - name: build-trusted-ca-bundle
+          image: {{ .Values.global.trustedCa.bundleImage | default "alpine:3.22.1" }}
+          imagePullPolicy: IfNotPresent
+          command: [sh, -c]
+          args:
+            - cat /etc/ssl/certs/ca-certificates.crt /xib-custom-ca/ca.crt > /xib-trust/ca-bundle.crt
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: xib-custom-ca, mountPath: /xib-custom-ca, readOnly: true}
+            - {name: xib-trust, mountPath: /xib-trust}
         - name: falcoctl-artifact-install
           image: docker.io/falcosecurity/falcoctl:0.11.0
           imagePullPolicy: IfNotPresent
@@ -42,6 +58,8 @@ spec:
             - artifact
             - install
             - --log-format=json
+          env:
+            - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
           resources:
             requests:
               cpu: 50m
@@ -50,6 +68,7 @@ spec:
               cpu: 100m
               memory: 128Mi
           volumeMounts:
+            - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
             - name: plugins
               mountPath: /plugins
             - name: rulesfiles
@@ -78,12 +97,14 @@ spec:
           env:
             - name: HOST_ROOT
               value: ""
+            - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
           ports:
             - name: webhook
               containerPort: {{ .Values.auditPlugin.k8saudit.port }}
               hostPort: {{ .Values.auditPlugin.k8saudit.port }}
               protocol: TCP
           volumeMounts:
+            - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
             - name: config
               mountPath: /etc/falco
             - name: plugins
@@ -114,6 +135,11 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
       volumes:
+        - name: xib-custom-ca
+          configMap:
+            name: xib-environment-ca
+            items: [{key: ca.crt, path: ca.crt}]
+        - {name: xib-trust, emptyDir: {}}
         - name: config
           configMap:
             name: {{ include "sib-k8s.fullname" . }}-k8saudit-config

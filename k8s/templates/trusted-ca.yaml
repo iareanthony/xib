@@ -1,13 +1,20 @@
 {{- $localCa := .Files.Get "custom-ca/ca.crt" -}}
-{{- if and (not .Values.global.trustedCa.existingConfigMap) .Values.global.trustedCa.autoDiscover $localCa }}
+{{- if and .Values.global.trustedCa.existingConfigMap (ne .Values.global.trustedCa.existingConfigMap "xib-environment-ca") -}}
+{{- fail "global.trustedCa.existingConfigMap must be named xib-environment-ca so the vendored SIB workloads can share it" -}}
+{{- end }}
+{{- if not .Values.global.trustedCa.existingConfigMap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "xib.fullname" . }}-environment-ca
+  name: xib-environment-ca
   labels:
     app.kubernetes.io/name: xib-environment-ca
     app.kubernetes.io/part-of: xib
 data:
   ca.crt: |-
+{{- if and .Values.global.trustedCa.autoDiscover $localCa }}
 {{ $localCa | indent 4 }}
+{{- else }}
+    # No environment CA supplied.
+{{- end }}
 {{- end }}

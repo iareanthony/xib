@@ -77,10 +77,14 @@ helm upgrade --install xib ./k8s -n xib-system --create-namespace
 
 Helm detects the file, creates the ConfigMap, and enables the combined trust
 bundle automatically. The certificate is ignored by Git. For GitOps or a
-centrally managed CA ConfigMap, leave the directory empty and set:
+centrally managed CA ConfigMap, leave the directory empty, create the ConfigMap
+with the required shared name, and set:
 
 ```bash
---set-string global.trustedCa.existingConfigMap=<configmap-name>
+kubectl -n xib-system create configmap xib-environment-ca \
+  --from-file=ca.crt=/path/to/environment-root-cas.pem
+
+--set-string global.trustedCa.existingConfigMap=xib-environment-ca
 ```
 
 XIB appends the supplied certificates to the public CA bundle and provides the
