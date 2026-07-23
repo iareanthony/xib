@@ -1,6 +1,8 @@
-global:
+xib:
   # Change to the registry reachable by every node in the offline cluster.
   imageRegistry: registry.local/xib
+
+global:
   imagePullPolicy: IfNotPresent
 
 tib:

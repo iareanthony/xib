@@ -86,7 +86,8 @@ proxy. The collectors do not receive the host Docker socket directly.
 ### 4.2 Kubernetes standalone
 
 The default `k8s/values.yaml` profile installs XIB-owned VictoriaMetrics and
-Grafana services. Use this profile for a new cluster or a self-contained test.
+Grafana services plus the vendored SIB-K8s runtime stack. Use this profile for
+a new cluster or a self-contained test.
 
 ### 4.3 Kubernetes existing platform
 
@@ -482,10 +483,13 @@ SIB Falco runs privileged, mounts `/dev`, `/proc`, `/etc`, and the Docker
 socket, and uses modern eBPF. Treat it as host-root-equivalent. It requires a
 supported Linux kernel and does not support Docker Desktop.
 
-For Kubernetes, `iareanthony/sib-k8s` remains a separate Helm release. Install
-the vendored `sib-k8s` chart from the same offline transfer set when runtime and
-Kubernetes audit monitoring are required. The XIB `sib` values are integration
-metadata, not an embedded Falco installation.
+For Kubernetes, the vendored `sib-k8s` chart is an enabled dependency of the
+main XIB Helm release. A normal XIB install therefore adds the Falco DaemonSet,
+the generic Kubernetes audit receiver, Falcosidekick, and Loki. The existing
+XIB Grafana provisions Loki as a datasource and loads the SIB dashboards into
+the **SIB Runtime Security** folder. Set `sib.enabled=false` only when the cluster
+already has equivalent runtime monitoring. The optional AI analyzer remains
+disabled until an operator configures an LLM endpoint.
 
 ## 11. Post-deployment validation
 

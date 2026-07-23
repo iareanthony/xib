@@ -1,0 +1,22 @@
+{{/*
+Analysis Service ConfigMap
+*/}}
+{{- if .Values.analysis.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sib-k8s.analysis.fullname" . }}-config
+  labels:
+    {{- include "sib-k8s.analysis.labels" . | nindent 4 }}
+data:
+  # Server configuration
+  ANALYZER_PORT: "{{ .Values.analysis.service.port }}"
+
+  # Obfuscation configuration
+  ANALYZER_OBFUSCATION_LEVEL: {{ .Values.analysis.obfuscation.level | quote }}
+
+  # Cache configuration
+  ANALYZER_CACHE_ENABLED: {{ .Values.analysis.cache.enabled | quote }}
+  ANALYZER_CACHE_TTL: {{ .Values.analysis.cache.ttl | quote }}
+  ANALYZER_CACHE_MAX_SIZE: {{ .Values.analysis.cache.maxSize | quote }}
+{{- end }}

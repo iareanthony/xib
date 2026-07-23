@@ -54,6 +54,16 @@ make up
 helm upgrade --install xib ./k8s -n xib-system --create-namespace
 ```
 
+The Helm release includes SIB-K8s by default: Falco runtime monitoring,
+Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
+Grafana. Disable it only when the
+cluster already has an equivalent runtime-detection stack:
+
+```bash
+helm upgrade --install xib ./k8s -n xib-system --create-namespace \
+  --set sib.enabled=false
+```
+
 For a disconnected cluster, prepare the image archive on a connected staging
 machine with `airgap/export-images.ps1`, transfer the resulting bundle, mirror
 or load the images, and install with `airgap/install.ps1`.

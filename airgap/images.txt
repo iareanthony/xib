@@ -8,3 +8,11 @@ ghcr.io/iareanthony/xib-pib-monitor@sha256:8171cbd2629e79d97ed0eaedfd4d18d24cc18
 ghcr.io/iareanthony/xib-iib-monitor@sha256:64e93f7c69546056b3a6edca2f0a1a3c1639545a6a95c831dffb13908613a3e8
 victoriametrics/victoria-metrics:v1.121.0
 grafana/grafana:12.1.0
+docker.io/falcosecurity/falco:0.40.0-debian
+docker.io/falcosecurity/falcoctl:0.11.0
+docker.io/falcosecurity/falcosidekick:2.30.0
+docker.io/grafana/loki:3.3.2
+docker.io/grafana/loki-canary:3.3.2
+kiwigrid/k8s-sidecar:1.28.0
+memcached:1.6.33-alpine
+prom/memcached-exporter:v0.15.0

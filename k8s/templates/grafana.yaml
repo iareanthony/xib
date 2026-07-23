@@ -33,6 +33,9 @@ data:
       - {name: CIB Metrics, uid: cib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
       - {name: IIB Metrics, uid: iib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
       - {name: PIB Metrics, uid: pib-vm, type: prometheus, access: proxy, url: {{ include "xib.vmUrl" . }}}
+      {{- if .Values.sib.enabled }}
+      - {name: SIB Logs, uid: loki, type: loki, access: proxy, url: http://xib-loki:3100}
+      {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -51,6 +54,21 @@ data:
         options:
           path: /etc/grafana/dashboards
           foldersFromFilesStructure: false
+  {{- if .Values.sib.enabled }}
+  sib-provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: SIB Dashboards
+        orgId: 1
+        folder: SIB Runtime Security
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/sib-dashboards
+          foldersFromFilesStructure: false
+  {{- end }}
   {{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
   {{ base $path }}: |-
 {{ $.Files.Get $path | indent 4 }}
@@ -100,10 +118,32 @@ spec:
             - {name: datasources, mountPath: /etc/grafana/provisioning/datasources, readOnly: true}
             - {name: dashboards, mountPath: /etc/grafana/dashboards, readOnly: true}
             - {name: dashboards, mountPath: /etc/grafana/provisioning/dashboards/xib.yaml, subPath: provider.yaml, readOnly: true}
+            {{- if .Values.sib.enabled }}
+            - {name: dashboards, mountPath: /etc/grafana/provisioning/dashboards/sib.yaml, subPath: sib-provider.yaml, readOnly: true}
+            - {name: sib-dashboards, mountPath: /var/lib/grafana/sib-dashboards, readOnly: true}
+            {{- end }}
+        {{- if .Values.sib.enabled }}
+        - name: sib-dashboards-sidecar
+          image: kiwigrid/k8s-sidecar:1.28.0
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - {name: METHOD, value: WATCH}
+            - {name: LABEL, value: grafana_dashboard}
+            - {name: FOLDER, value: /var/lib/grafana/sib-dashboards}
+            - {name: RESOURCE, value: configmap}
+            - {name: NAMESPACE, valueFrom: {fieldRef: {fieldPath: metadata.namespace}}}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, runAsNonRoot: true, runAsUser: 472, runAsGroup: 472}
+          resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {cpu: 100m, memory: 128Mi}}
+          volumeMounts:
+            - {name: sib-dashboards, mountPath: /var/lib/grafana/sib-dashboards}
+        {{- end }}
       volumes:
         - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-grafana}}
         - {name: datasources, configMap: {name: {{ include "xib.fullname" . }}-grafana-datasources}}
         - {name: dashboards, configMap: {name: {{ include "xib.fullname" . }}-grafana-dashboards}}
+        {{- if .Values.sib.enabled }}
+        - {name: sib-dashboards, emptyDir: {}}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

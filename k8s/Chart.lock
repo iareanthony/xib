@@ -1,0 +1,6 @@
+dependencies:
+- name: sib-k8s
+  repository: file://charts/sib-k8s
+  version: 0.1.0
+digest: sha256:028b190c3dcce7c17ada6002feb506fcca965cda820f9e3d243cb7a578377eec
+generated: "2026-07-23T11:27:33.9608274-04:00"
