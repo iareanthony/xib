@@ -1,0 +1,8 @@
+# Docker Desktop and other Kubernetes clusters hosted by WSL2 do not expose a
+# supported Linux kernel capture driver to Falco. Kubernetes audit monitoring
+# remains enabled; only host syscall monitoring is disabled for this profile.
+sib:
+  syscallMonitoring:
+    enabled: false
+  falco:
+    enabled: false

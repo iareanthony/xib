@@ -321,7 +321,6 @@ falco:
     metrics:
       enabled: true
       interval: 1h
-      outputRule: true
 
   # -- Falcoctl configuration for artifact management
   falcoctl:

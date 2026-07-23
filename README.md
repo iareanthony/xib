@@ -64,6 +64,15 @@ helm upgrade --install xib ./k8s -n xib-system --create-namespace \
   --set sib.enabled=false
 ```
 
+Docker Desktop on WSL2 does not expose a supported kernel capture driver to
+Falco. For a local test cluster, use the WSL profile to keep Kubernetes audit
+monitoring enabled while omitting only host syscall monitoring:
+
+```bash
+helm upgrade --install xib ./k8s -n xib-system --create-namespace \
+  -f ./k8s/values-wsl.yaml
+```
+
 ### Environment root CAs
 
 For a Kubernetes environment with TLS interception or private certificate
