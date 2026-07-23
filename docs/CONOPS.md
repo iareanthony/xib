@@ -73,11 +73,12 @@ required by a selected deployment profile remain operator-controlled.
 
 For environments that intercept TLS or use private certificate authorities,
 operators can provide PEM root CAs without modifying container images. The Helm
-profile accepts an existing ConfigMap through
-`global.trustedCa.existingConfigMap`; an init container combines those roots
-with the public CA bundle and exposes it to XIB application HTTPS clients. The
-Compose `make up-ca` target performs the equivalent bundle preparation on a
-Linux host. Environment CA files and generated bundles must not be committed.
+profile automatically detects `k8s/custom-ca/ca.crt`, or accepts an existing
+ConfigMap through `global.trustedCa.existingConfigMap`; an init container
+combines those roots with the public CA bundle and exposes it to XIB
+application HTTPS clients. The Compose `make up-ca` target performs the
+equivalent bundle preparation on a Linux host. Environment CA files and
+generated bundles must not be committed.
 
 IIB and PIB dashboards are installed even when their collectors are disabled.
 Their panels remain empty until the corresponding component is configured.

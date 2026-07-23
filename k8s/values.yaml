@@ -3,8 +3,10 @@ global:
   imagePullSecrets: []
   storageClass: ""
   trustedCa:
+    # Automatically use custom-ca/ca.crt when it exists in the chart directory.
+    autoDiscover: true
     # ConfigMap containing one or more PEM root CAs. XIB appends these to the
-    # public CA bundle and exposes the result to its outbound HTTPS clients.
+    # public CA bundle. This takes precedence over auto-discovery.
     existingConfigMap: ""
     key: ca.crt
     bundleImage: alpine:3.22.1
