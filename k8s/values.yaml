@@ -116,11 +116,16 @@ sib:
             name: xib-environment-ca
             items: [{key: ca.crt, path: ca.crt}]
         - {name: xib-trust, emptyDir: {}}
+        - {name: xib-runtime, emptyDir: {}}
       volumeMounts:
         - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+        - {name: xib-runtime, mountPath: /tmp}
     extra:
       env:
         - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+        - {name: HOME, value: /tmp}
+        - {name: XDG_CACHE_HOME, value: /tmp/.cache}
+        - {name: XDG_CONFIG_HOME, value: /tmp/.config}
       initContainers:
         - name: build-trusted-ca-bundle
           image: alpine:3.22.1
@@ -142,15 +147,23 @@ sib:
         install:
           env:
             - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+            - {name: HOME, value: /tmp}
+            - {name: XDG_CACHE_HOME, value: /tmp/.cache}
+            - {name: XDG_CONFIG_HOME, value: /tmp/.config}
           mounts:
             volumeMounts:
               - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+              - {name: xib-runtime, mountPath: /tmp}
         follow:
           env:
             - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+            - {name: HOME, value: /tmp}
+            - {name: XDG_CACHE_HOME, value: /tmp/.cache}
+            - {name: XDG_CONFIG_HOME, value: /tmp/.config}
           mounts:
             volumeMounts:
               - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+              - {name: xib-runtime, mountPath: /tmp}
     falco:
       http_output:
         url: "http://xib-falcosidekick:2801"

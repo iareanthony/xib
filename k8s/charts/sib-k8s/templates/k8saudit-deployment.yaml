@@ -23,6 +23,8 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       securityContext:
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       initContainers:
@@ -60,6 +62,9 @@ spec:
             - --log-format=json
           env:
             - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+            - {name: HOME, value: /tmp}
+            - {name: XDG_CACHE_HOME, value: /tmp/.cache}
+            - {name: XDG_CONFIG_HOME, value: /tmp/.config}
           resources:
             requests:
               cpu: 50m
@@ -69,6 +74,7 @@ spec:
               memory: 128Mi
           volumeMounts:
             - {name: xib-trust, mountPath: /etc/xib/trust, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
             - name: plugins
               mountPath: /plugins
             - name: rulesfiles
@@ -98,6 +104,9 @@ spec:
             - name: HOST_ROOT
               value: ""
             - {name: SSL_CERT_FILE, value: /etc/xib/trust/ca-bundle.crt}
+            - {name: HOME, value: /tmp}
+            - {name: XDG_CACHE_HOME, value: /tmp/.cache}
+            - {name: XDG_CONFIG_HOME, value: /tmp/.config}
           ports:
             - name: webhook
               containerPort: {{ .Values.auditPlugin.k8saudit.port }}
