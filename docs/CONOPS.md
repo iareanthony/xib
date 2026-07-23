@@ -66,6 +66,11 @@ Grafana provisions six dashboards in the **XIB** folder:
 - IIB — Identity Overview
 - PIB — PKI Certificate Health
 
+Grafana automatic plugin preinstallation, update checks, usage reporting, and
+the news feed are disabled. This avoids unnecessary outbound requests on
+restricted, intercepted, and disconnected networks. Plugins explicitly
+required by a selected deployment profile remain operator-controlled.
+
 IIB and PIB dashboards are installed even when their collectors are disabled.
 Their panels remain empty until the corresponding component is configured.
 
