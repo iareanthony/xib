@@ -1,0 +1,13 @@
+{{- $localCa := .Files.Get "custom-ca/ca.crt" -}}
+{{- if and (not .Values.global.trustedCa.existingConfigMap) .Values.global.trustedCa.autoDiscover $localCa }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "xib.fullname" . }}-environment-ca
+  labels:
+    app.kubernetes.io/name: xib-environment-ca
+    app.kubernetes.io/part-of: xib
+data:
+  ca.crt: |-
+{{ $localCa | indent 4 }}
+{{- end }}

@@ -1,0 +1,16 @@
+# Optional environment CA bundle for outbound HTTPS from XIB applications.
+# Use `XIB_ROOT_CA=/path/to/environment-root-cas.pem make up-ca`.
+x-trusted-ca: &trusted-ca
+  environment:
+    SSL_CERT_FILE: /etc/xib/trust/ca-bundle.crt
+    REQUESTS_CA_BUNDLE: /etc/xib/trust/ca-bundle.crt
+  volumes:
+    - ${XIB_CA_BUNDLE:?Set XIB_CA_BUNDLE to the prepared PEM bundle}:/etc/xib/trust/ca-bundle.crt:ro
+
+services:
+  vib: *trusted-ca
+  cib: *trusted-ca
+  tib: *trusted-ca
+  pib: *trusted-ca
+  iib: *trusted-ca
+  grafana: *trusted-ca

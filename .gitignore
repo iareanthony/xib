@@ -1,3 +1,6 @@
 .env
 .DS_Store
 .xib-components/
+.xib/
+k8s/custom-ca/*
+!k8s/custom-ca/README.md

@@ -2,6 +2,14 @@ global:
   imagePullPolicy: IfNotPresent
   imagePullSecrets: []
   storageClass: ""
+  trustedCa:
+    # Automatically use custom-ca/ca.crt when it exists in the chart directory.
+    autoDiscover: true
+    # ConfigMap containing one or more PEM root CAs. XIB appends these to the
+    # public CA bundle. This takes precedence over auto-discovery.
+    existingConfigMap: ""
+    key: ca.crt
+    bundleImage: alpine:3.22.1
 
 xib:
   # Kept outside Helm's reserved global scope so this prefix is not inherited

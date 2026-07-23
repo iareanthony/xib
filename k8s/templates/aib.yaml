@@ -29,6 +29,7 @@ spec:
       # AIB uses the in-cluster token to perform its configured read-only live scan.
       automountServiceAccountToken: true
       securityContext: {runAsNonRoot: true, runAsUser: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      {{- include "xib.trustedCa.initContainer" . | nindent 6 }}
       containers:
         - name: aib
           image: {{ include "xib.image" (dict "Values" .Values "image" .Values.aib.image) | quote }}
@@ -44,12 +45,16 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 15
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          env:
+            {{- include "xib.trustedCa.env" . | nindent 12 }}
           resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
           volumeMounts:
+            {{- include "xib.trustedCa.volumeMount" . | nindent 12 }}
             - {name: data, mountPath: /data}
             - {name: config, mountPath: /config/aib.yaml, subPath: aib.yaml, readOnly: true}
             - {name: tmp, mountPath: /tmp}
       volumes:
+        {{- include "xib.trustedCa.volumes" . | nindent 8 }}
         - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-aib}}
         - {name: config, configMap: {name: {{ include "xib.fullname" . }}-aib}}
         - {name: tmp, emptyDir: {}}

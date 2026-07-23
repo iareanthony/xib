@@ -95,12 +95,14 @@ spec:
     spec:
       serviceAccountName: {{ include "xib.fullname" . }}
       securityContext: {runAsNonRoot: true, runAsUser: 472, runAsGroup: 472, fsGroup: 472, seccompProfile: {type: RuntimeDefault}}
+      {{- include "xib.trustedCa.initContainer" . | nindent 6 }}
       containers:
         - name: grafana
           image: {{ .Values.platform.grafana.image | quote }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports: [{name: http, containerPort: 3000}]
           env:
+            {{- include "xib.trustedCa.env" . | nindent 12 }}
             - name: GF_SECURITY_ADMIN_USER
               valueFrom:
                 secretKeyRef:
@@ -111,9 +113,15 @@ spec:
                 secretKeyRef:
                   name: {{ default (printf "%s-grafana-admin" (include "xib.fullname" .)) .Values.platform.grafana.admin.existingSecret }}
                   key: {{ .Values.platform.grafana.admin.passwordKey }}
+            - {name: GF_ANALYTICS_REPORTING_ENABLED, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_UPDATES, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES, value: "false"}
+            - {name: GF_NEWS_NEWS_FEED_ENABLED, value: "false"}
+            - {name: GF_PLUGINS_PREINSTALL_DISABLED, value: "true"}
           securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
           resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
           volumeMounts:
+            {{- include "xib.trustedCa.volumeMount" . | nindent 12 }}
             - {name: data, mountPath: /var/lib/grafana}
             - {name: datasources, mountPath: /etc/grafana/provisioning/datasources, readOnly: true}
             - {name: dashboards, mountPath: /etc/grafana/dashboards, readOnly: true}
@@ -138,6 +146,7 @@ spec:
             - {name: sib-dashboards, mountPath: /var/lib/grafana/sib-dashboards}
         {{- end }}
       volumes:
+        {{- include "xib.trustedCa.volumes" . | nindent 8 }}
         - {name: data, persistentVolumeClaim: {claimName: {{ include "xib.fullname" . }}-grafana}}
         - {name: datasources, configMap: {name: {{ include "xib.fullname" . }}-grafana-datasources}}
         - {name: dashboards, configMap: {name: {{ include "xib.fullname" . }}-grafana-dashboards}}
