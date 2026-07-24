@@ -94,6 +94,7 @@ spec:
     metadata: {labels: {app.kubernetes.io/name: xib-grafana, app.kubernetes.io/part-of: xib}}
     spec:
       serviceAccountName: {{ include "xib.fullname" . }}
+      automountServiceAccountToken: false
       securityContext: {runAsNonRoot: true, runAsUser: 472, runAsGroup: 472, fsGroup: 472, seccompProfile: {type: RuntimeDefault}}
       {{- include "xib.trustedCa.initContainer" . | nindent 6 }}
       containers:
@@ -144,6 +145,7 @@ spec:
           resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {cpu: 100m, memory: 128Mi}}
           volumeMounts:
             - {name: sib-dashboards, mountPath: /var/lib/grafana/sib-dashboards}
+            - {name: kube-api-access, mountPath: /var/run/secrets/kubernetes.io/serviceaccount, readOnly: true}
         {{- end }}
       volumes:
         {{- include "xib.trustedCa.volumes" . | nindent 8 }}
@@ -152,6 +154,19 @@ spec:
         - {name: dashboards, configMap: {name: {{ include "xib.fullname" . }}-grafana-dashboards}}
         {{- if .Values.sib.enabled }}
         - {name: sib-dashboards, emptyDir: {}}
+        # Mount API credentials only into the sidecar that watches ConfigMaps.
+        - name: kube-api-access
+          projected:
+            defaultMode: 420
+            sources:
+              - serviceAccountToken: {path: token, expirationSeconds: 3600}
+              - configMap:
+                  name: kube-root-ca.crt
+                  items: [{key: ca.crt, path: ca.crt}]
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef: {apiVersion: v1, fieldPath: metadata.namespace}
         {{- end }}
 ---
 apiVersion: v1
