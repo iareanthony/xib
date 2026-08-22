@@ -54,6 +54,10 @@ make up
 helm upgrade --install xib ./k8s -n xib-system --create-namespace
 ```
 
+The AMFTech PIB release uses `k8s/values-amftech-pib.yaml` with
+`--reuse-values`. It records the current certificate-monitor endpoint inventory
+without changing the portable chart defaults.
+
 The Helm release includes SIB-K8s by default: Falco runtime monitoring,
 Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
 Grafana. Disable it only when the
