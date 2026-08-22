@@ -58,6 +58,11 @@ The AMFTech PIB release uses `k8s/values-amftech-pib.yaml` with
 `--reuse-values`. It records the current certificate-monitor endpoint inventory
 without changing the portable chart defaults.
 
+Falco syscall monitoring on Talos uses the bundled `modern_ebpf` driver. The
+Falco DaemonSet must run on every node without a `falco-driver=kmod` node
+selector or kernel-module loader; verify it reports `Opening 'syscall' source
+with modern BPF probe` after an upgrade.
+
 The Helm release includes SIB-K8s by default: Falco runtime monitoring,
 Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
 Grafana. Disable it only when the
