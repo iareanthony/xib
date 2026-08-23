@@ -37,3 +37,12 @@ falco:
           )
         override:
           condition: append
+    kubernetes-api-detection.yaml: |-
+      - macro: k8s_api_server
+        condition: >
+          or (fd.sip = 10.96.0.1 and fd.rport = 443)
+          or (fd.rip = 10.96.0.1 and fd.rport = 443)
+          or (fd.sip in (192.168.50.20, 192.168.50.21, 192.168.50.22) and fd.rport = 6443)
+          or (fd.rip in (192.168.50.20, 192.168.50.21, 192.168.50.22) and fd.rport = 6443)
+        override:
+          condition: append

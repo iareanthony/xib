@@ -71,6 +71,9 @@ completed response in Loki under `source="ai_analysis"`, and provisions the
 The AMFTech SIB release uses `k8s/values-amftech-sib.yaml` with
 `--reuse-values`. Its Falco exceptions suppress only verified workload startup
 behavior while retaining detection for other dropped executables and commands.
+The same override also identifies the Kubernetes API by its service and Talos
+control-plane addresses because Falco cannot rely on reverse DNS for ClusterIP
+connections.
 
 The Helm release includes SIB-K8s by default: Falco runtime monitoring,
 Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
