@@ -63,6 +63,11 @@ Falco DaemonSet must run on every node without a `falco-driver=kmod` node
 selector or kernel-module loader; verify it reports `Opening 'syscall' source
 with modern BPF probe` after an upgrade.
 
+When SIB analysis is enabled, Falcosidekick sends alerts through the analysis
+archive service. The service calls the configured LLM analyzer, stores the
+completed response in Loki under `source="ai_analysis"`, and provisions the
+`SIB AI Analysis` Grafana dashboard.
+
 The Helm release includes SIB-K8s by default: Falco runtime monitoring,
 Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
 Grafana. Disable it only when the

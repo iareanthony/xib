@@ -1,0 +1,152 @@
+{{- if and .Values.analysis.enabled .Values.analysis.archive.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sib-k8s.analysis.fullname" . }}-archive
+  labels:
+    {{- include "sib-k8s.analysis.labels" . | nindent 4 }}
+data:
+  archive.py: |
+    import json
+    import os
+    import re
+    import time
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    ANALYZER_URL = os.environ["ANALYZER_URL"]
+    LOKI_URL = os.environ["LOKI_URL"]
+    REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "300"))
+
+    def label(value):
+        return re.sub(r"[^A-Za-z0-9_.:-]", "_", str(value or "unknown"))[:200]
+
+    def post_json(url, payload):
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            body = response.read()
+            return json.loads(body) if body else {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def reply(self, status, payload):
+            body = json.dumps(payload).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path in ("/health", "/ready"):
+                self.reply(200, {"status": "ready"})
+            else:
+                self.reply(404, {"error": "not found"})
+
+        def do_POST(self):
+            if self.path != "/webhook":
+                self.reply(404, {"error": "not found"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                alert = json.loads(self.rfile.read(length))
+                result = post_json(ANALYZER_URL, alert)
+                record = {
+                    "rule": alert.get("rule", "unknown"),
+                    "priority": alert.get("priority", "unknown"),
+                    "hostname": alert.get("hostname", "unknown"),
+                    "alert_time": alert.get("time", ""),
+                    "analysis": result.get("analysis", ""),
+                    "mitre_techniques": result.get("mitre_techniques", []),
+                    "analysis_time_ms": result.get("analysis_time_ms"),
+                    "cached": result.get("cached", False),
+                    "obfuscation_level": result.get("obfuscation_level", ""),
+                    "analyzed_at": result.get("timestamp", ""),
+                }
+                stream = {
+                    "source": "ai_analysis",
+                    "rule": label(record["rule"]),
+                    "priority": label(record["priority"]),
+                    "hostname": label(record["hostname"]),
+                }
+                post_json(LOKI_URL, {"streams": [{"stream": stream, "values": [[str(time.time_ns()), json.dumps(record)]]}]})
+                self.reply(200, {"status": "archived", "cached": record["cached"]})
+            except Exception as error:
+                self.log_error("analysis archive failed: %s", error)
+                self.reply(502, {"error": str(error)})
+
+        def log_message(self, message, *args):
+            print("%s - %s" % (self.address_string(), message % args), flush=True)
+
+    ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sib-k8s.analysis.fullname" . }}-archive
+  labels:
+    {{- include "sib-k8s.analysis.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "sib-k8s.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: analysis-archive
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "sib-k8s.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: analysis-archive
+    spec:
+      containers:
+        - name: archive
+          image: {{ .Values.analysis.archive.image | quote }}
+          imagePullPolicy: IfNotPresent
+          command: [python, /app/archive.py]
+          env:
+            - {name: ANALYZER_URL, value: {{ .Values.analysis.archive.analyzerUrl | quote }}}
+            - {name: LOKI_URL, value: {{ .Values.analysis.archive.lokiUrl | quote }}}
+            - {name: REQUEST_TIMEOUT, value: {{ .Values.analysis.archive.requestTimeoutSeconds | quote }}}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe: {httpGet: {path: /ready, port: http}, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 20}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile: {type: RuntimeDefault}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          volumeMounts:
+            - {name: script, mountPath: /app, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: script
+          configMap: {name: {{ include "sib-k8s.analysis.fullname" . }}-archive}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sib-k8s.analysis.fullname" . }}-archive
+  labels:
+    {{- include "sib-k8s.analysis.labels" . | nindent 4 }}
+spec:
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+  selector:
+    app.kubernetes.io/name: {{ include "sib-k8s.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: analysis-archive
+{{- end }}

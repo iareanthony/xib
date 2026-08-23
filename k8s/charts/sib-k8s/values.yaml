@@ -261,6 +261,13 @@ analysis:
     ttl: 3600
     maxSize: 1000
 
+  archive:
+    enabled: true
+    image: python:3.12-alpine
+    analyzerUrl: http://sib-k8s-analysis:8080/analyze
+    lokiUrl: http://sib-k8s-loki:3100/loki/api/v1/push
+    requestTimeoutSeconds: 300
+
 # =============================================================================
 # Falco Configuration
 # =============================================================================
@@ -361,7 +368,7 @@ falcosidekick:
 
     # -- Webhook output (to analysis service)
     webhook:
-      address: "http://sib-k8s-analysis:8080/webhook"
+      address: "http://sib-k8s-analysis-archive:8080/webhook"
       minimumpriority: ""
 
     # -- Additional outputs (Slack, Teams, PagerDuty, etc.)
