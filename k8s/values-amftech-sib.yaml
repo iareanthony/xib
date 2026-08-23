@@ -27,3 +27,14 @@ falco:
           )
         override:
           condition: append
+    cilium-cni-exceptions.yaml: |-
+      - rule: Drop and execute new binary in container
+        condition: >
+          and not (
+            proc.exepath = /opt/cni/bin/cilium-cni
+            and proc.name = cilium-cni
+            and proc.pname = containerd
+            and proc.sname = init
+          )
+        override:
+          condition: append
