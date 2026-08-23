@@ -1,0 +1,29 @@
+# AMFTech overrides for the independently deployed SIB security stack.
+# Upgrade with: helm upgrade sib-k8s ./k8s/charts/sib-k8s -n security --reuse-values -f k8s/values-amftech-sib.yaml
+falco:
+  customRules:
+    flaresolverr-exceptions.yaml: |-
+      - rule: Drop and execute new binary in container
+        condition: >
+          and not (
+            k8s.ns.name = streaming
+            and k8s.pod.name startswith flaresolverr-
+            and container.image.repository = ghcr.io/flaresolverr/flaresolverr
+            and proc.exepath = /app/chromedriver
+            and proc.pname = python
+            and user.name = flaresolverr
+          )
+        override:
+          condition: append
+    pihole-exceptions.yaml: |-
+      - rule: Drop and execute new binary in container
+        condition: >
+          and not (
+            k8s.ns.name = pihole
+            and k8s.pod.name startswith pihole-
+            and container.image.repository = docker.io/pihole/pihole
+            and proc.exepath = /usr/bin/pihole-FTL
+            and proc.sname = start.sh
+          )
+        override:
+          condition: append

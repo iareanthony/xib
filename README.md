@@ -68,6 +68,10 @@ archive service. The service calls the configured LLM analyzer, stores the
 completed response in Loki under `source="ai_analysis"`, and provisions the
 `SIB AI Analysis` Grafana dashboard.
 
+The AMFTech SIB release uses `k8s/values-amftech-sib.yaml` with
+`--reuse-values`. Its Falco exceptions suppress only verified workload startup
+behavior while retaining detection for other dropped executables and commands.
+
 The Helm release includes SIB-K8s by default: Falco runtime monitoring,
 Falcosidekick, Loki, and SIB dashboards provisioned into the existing XIB
 Grafana. Disable it only when the
