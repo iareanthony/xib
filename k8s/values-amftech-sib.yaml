@@ -23,7 +23,6 @@ falco:
             and k8s.pod.name startswith pihole-
             and container.image.repository = docker.io/pihole/pihole
             and proc.exepath = /usr/bin/pihole-FTL
-            and proc.sname = start.sh
           )
         override:
           condition: append
