@@ -88,7 +88,7 @@ services:
   vib:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-vib
     <<: *docker-collector
-    image: ghcr.io/iareanthony/xib-vib-scanner@sha256:f17e85c9ccc00194c959522fc75eaab0a5e8ab709065bdec76837199e01af2cd
+    image: ghcr.io/iareanthony/xib-vib-scanner@sha256:99d65a24692a93b2136457d31e0b5cf633f4b54b7ca5be9d9004bf78ffa99224
     volumes: ["vib-trivy-cache:/data/trivy-cache"]
     environment:
       DOCKER_HOST: tcp://docker-socket-proxy:2375
@@ -101,7 +101,7 @@ services:
   cib:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-cib
     <<: *docker-collector
-    image: ghcr.io/iareanthony/xib-cib-checker@sha256:fb815194eabb0a2048871ad174ee479050b65e6b817c111527ed4fabb58e85f3
+    image: ghcr.io/iareanthony/xib-cib-checker@sha256:6e4835a6aee9469f6ff6a91ff7e77041afdfb841b3a56da5f091b5c240065439
     volumes: ["cib-data:/data"]
     environment:
       DOCKER_HOST: tcp://docker-socket-proxy:2375
@@ -113,7 +113,7 @@ services:
   tib:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-tib
     <<: *collector
-    image: ghcr.io/iareanthony/xib-tib-collector@sha256:0b9fe36da1e6ad2bf8760103e3543fc4d366a38671f1b07a63c4c2da412a7902
+    image: ghcr.io/iareanthony/xib-tib-collector@sha256:78a779317c4546d15c6b964fc17fb08671ba2d25f9ffcd2af60c263894fae047
     volumes: ["tib-data:/data"]
     environment:
       VICTORIAMETRICS_URL: http://victoriametrics:8428
@@ -126,7 +126,7 @@ services:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-pib
     profiles: [pki]
     <<: *collector
-    image: ghcr.io/iareanthony/xib-pib-monitor@sha256:8171cbd2629e79d97ed0eaedfd4d18d24cc1875bce8cb154ab2c0f9eeddf3f1b
+    image: ghcr.io/iareanthony/xib-pib-monitor@sha256:c3bb209df286e34e64d939c66e05c20a078e732d152ca5429e670488498d43d4
     environment:
       VICTORIAMETRICS_URL: http://victoriametrics:8428
       ENDPOINTS: "${PIB_ENDPOINTS:-}"
@@ -136,7 +136,7 @@ services:
     container_name: ${XIB_CONTAINER_PREFIX:-xib}-iib
     profiles: [identity]
     restart: unless-stopped
-    image: ghcr.io/iareanthony/xib-iib-monitor@sha256:64e93f7c69546056b3a6edca2f0a1a3c1639545a6a95c831dffb13908613a3e8
+    image: ghcr.io/iareanthony/xib-iib-monitor@sha256:3a21e3108865cc49b350a1d815e1bf95c01b7efaf182a7f5a55419898ca4d3b4
     environment:
       AUTHENTIK_URL: "${AUTHENTIK_URL:-http://host.docker.internal:9000}"
       AUTHENTIK_TOKEN: "${AUTHENTIK_TOKEN:-}"
