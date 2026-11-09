@@ -266,6 +266,9 @@ make up
 
 XIB adds no dependencies to the individual tools — they function identically with or without the umbrella.
 
+Kubernetes adapter images rebuild without cache from current Alpine 3.23 or
+Debian Trixie bases and upgrade OS packages during each build.
+
 ---
 
 ## License

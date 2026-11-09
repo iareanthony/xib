@@ -40,6 +40,8 @@ jobs:
         with:
           context: .
           file: ${{ matrix.file }}
+          pull: true
+          no-cache: true
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:0.2.0
