@@ -1,5 +1,7 @@
 # AMFTech overrides for the independently deployed PIB certificate monitor.
-# Upgrade with: helm upgrade xib-pib ./k8s -n security --reuse-values -f k8s/values-amftech-pib.yaml
+# Upgrade with the current digest from values.yaml, for example:
+# helm upgrade xib-pib ./k8s -n security --reuse-values -f k8s/values-amftech-pib.yaml \
+#   --set-string 'pib.image=xib-pib-monitor@sha256:<current-digest>'
 pib:
   endpoints: >-
     aib.amftech.net,auth.amftech.net,chat.amftech.net,cleanuparr.amftech.net,cockpit-amfserver.amftech.net,cockpit-k8-manager.amftech.net,cockpit-k8-worker01.amftech.net,cockpit-k8-worker02.amftech.net,cockpit-k8-worker03.amftech.net,cockpit-k8-worker04.amftech.net,cockpit-k8-worker05.amftech.net,ersatztv.amftech.net,grafana.amftech.net,ha.amftech.net,headlamp.amftech.net,homepage.amftech.net,jellyfin.amftech.net,longhorn.amftech.net,nzbget.amftech.net,pihole.amftech.net,prowlarr.amftech.net,pushgateway.amftech.net,qbittorrent.amftech.net,radarr.amftech.net,seerr.amftech.net,sftpconsole.amftech.net,sonarr.amftech.net,speedtest.amftech.net,ubuntu.amftech.net,uptime.amftech.net,win7.amftech.net,win8.amftech.net,ws4player.amftech.net,ws4stream.amftech.net,xp.amftech.net
